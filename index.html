@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF14百萬亞米諾旅團工會懶人組隊分組器</title>
+    <style>
+        :root {
+            --bg-color: #2f3136;
+            --panel-color: #36393f;
+            --text-color: #dcddde;
+            --accent-color: #7289da;
+            --border-color: #202225;
+            --tank-color: #4d86f7;
+            --healer-color: #63ba5e;
+            --dps-color: #e85d58;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column; /* 改為直向排列，讓標題在最上面 */
+            align-items: center;
+        }
+
+        /* 修改點 2：新增標題樣式 */
+        h1.main-title {
+            text-align: center;
+            color: #fff;
+            margin: 10px 0 20px 0;
+            font-size: 1.8em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .panel {
+            background-color: var(--panel-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            flex: 1;
+            min-width: 300px;
+        }
+
+        h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="number"] {
+            background: #202225;
+            border: 1px solid #000;
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            width: 60px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        /* 名單列表樣式 */
+        .roster-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .roster-item:last-child { border-bottom: none; }
+
+        .name-label {
+            flex: 1;
+            font-size: 1.1em;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .role-btn {
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #2f3136;
+            color: #888;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+
+        /* 職能選取後的顏色 */
+        input[type="radio"] { display: none; }
+        
+        input[value="T"]:checked + span { background: var(--tank-color); color: white; border-color: var(--tank-color); }
+        input[value="H"]:checked + span { background: var(--healer-color); color: white; border-color: var(--healer-color); }
+        input[value="D"]:checked + span { background: var(--dps-color); color: white; border-color: var(--dps-color); }
+
+        .manual-input {
+            background: #202225;
+            border: 1px solid #444;
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            width: 120px;
+            font-size: 1em;
+        }
+
+        button.main-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 20px;
+        }
+
+        button.main-btn:hover { background-color: #5b6eae; }
+
+        /* 結果顯示區 */
+        #result-area {
+            white-space: pre-wrap;
+            font-family: "Consolas", monospace;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .team-block {
+            background: #202225;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 5px solid var(--accent-color);
+        }
+
+        .t-text { color: var(--tank-color); font-weight: bold; }
+        .h-text { color: var(--healer-color); font-weight: bold; }
+        .d-text { color: var(--dps-color); font-weight: bold; }
+        .warn { color: #ffcc00; font-weight: bold; }
+        .err { color: #ff4444; font-weight: bold; }
+
+        /* 手機版優化 */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; }
+            .panel { width: 100%; min-width: auto; }
+        }
+
+    </style>
+</head>
+<body>
+
+<h1 class="main-title">FF14百萬亞米諾旅團工會懶人組隊分組器</h1>
+
+<div class="container">
+    <div class="panel" style="order: 2;">
+        <h2>📝 出席與職能設定</h2>
+        
+        <div class="input-group">
+            <label>預計隊伍數量：</label>
+            <input type="number" id="teamCount" value="2" min="1">
+        </div>
+
+        <div id="roster-list">
+            </div>
+
+        <div style="margin-top: 15px; border-top: 1px dashed #555; padding-top:10px;">
+            <p style="color:#888; margin:0 0 10px 0; font-size: 0.9em;">--- 手動輸入區 (外找/野人) ---</p>
+            <div id="manual-list">
+                </div>
+        </div>
+
+        <button class="main-btn" onclick="generateTeams()">開始隨機分組</button>
+    </div>
+
+    <div class="panel" style="order: 1;">
+        <h2>📊 分組結果</h2>
+        <div id="result-area">
+            <div style="color: #888; text-align: center; margin-top: 50px;">
+                請在右側(或下方)<br>勾選出席人員並設定職能<br>最後按下按鈕
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const PRESET_NAMES = [
+        "色素", "r冷", "春捲", "希妮", "Evas", 
+        "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉"
+    ];
+
+    // 初始化頁面
+    function init() {
+        const rosterDiv = document.getElementById('roster-list');
+        
+        PRESET_NAMES.forEach((name, index) => {
+            const html = `
+                <div class="roster-item">
+                    <input type="checkbox" id="check_${index}" style="transform: scale(1.5); cursor:pointer;">
+                    <label class="name-label" for="check_${index}">${name}</label>
+                    <div class="role-selector">
+                        <label><input type="radio" name="role_${index}" value="T"><span class="role-btn">T</span></label>
+                        <label><input type="radio" name="role_${index}" value="H"><span class="role-btn">H</span></label>
+                        <label><input type="radio" name="role_${index}" value="D" checked><span class="role-btn">D</span></label>
+                    </div>
+                </div>
+            `;
+            rosterDiv.insertAdjacentHTML('beforeend', html);
+        });
+
+        const manualDiv = document.getElementById('manual-list');
+        for(let i=0; i<2; i++) {
+            const mIndex = 100 + i; // 避免 ID 衝突
+            const html = `
+                <div class="roster-item">
+                    <input type="checkbox" id="check_${mIndex}">
+                    <input type="text" id="name_${mIndex}" class="manual-input" placeholder="輸入ID...">
+                    <div class="role-selector" style="margin-left: auto;">
+                        <label><input type="radio" name="role_${mIndex}" value="T"><span class="role-btn">T</span></label>
+                        <label><input type="radio" name="role_${mIndex}" value="H"><span class="role-btn">H</span></label>
+                        <label><input type="radio" name="role_${mIndex}" value="D" checked><span class="role-btn">D</span></label>
+                    </div>
+                </div>
+            `;
+            manualDiv.insertAdjacentHTML('beforeend', html);
+        }
+    }
+
+    function generateTeams() {
+        const teamCount = parseInt(document.getElementById('teamCount').value);
+        const resultArea = document.getElementById('result-area');
+        
+        let tanks = [], healers = [], dps = [];
+
+        // 收集固定名單
+        PRESET_NAMES.forEach((name, index) => {
+            if(document.getElementById(`check_${index}`).checked) {
+                const role = document.querySelector(`input[name="role_${index}"]:checked`).value;
+                if(role === 'T') tanks.push(name);
+                else if(role === 'H') healers.push(name);
+                else dps.push(name);
+            }
+        });
+
+        // 收集手動名單
+        for(let i=0; i<2; i++) {
+            const mIndex = 100 + i;
+            const check = document.getElementById(`check_${mIndex}`).checked;
+            const nameVal = document.getElementById(`name_${mIndex}`).value.trim();
+            if(check && nameVal) {
+                const role = document.querySelector(`input[name="role_${mIndex}"]:checked`).value;
+                const finalName = nameVal + "(手)";
+                if(role === 'T') tanks.push(finalName);
+                else if(role === 'H') healers.push(finalName);
+                else dps.push(finalName);
+            }
+        }
+
+        // 驗證
+        const total = tanks.length + healers.length + dps.length;
+        if(total === 0) {
+            resultArea.innerHTML = '<div class="err">❌ 請至少勾選一位出席者</div>';
+            return;
+        }
+        if(tanks.length < teamCount) {
+            resultArea.innerHTML = `<div class="err">❌ 缺坦警告：需要 ${teamCount} 位，目前只有 ${tanks.length} 位</div>`;
+            return;
+        }
+        if(healers.length < teamCount) {
+            resultArea.innerHTML = `<div class="err">❌ 缺補警告：需要 ${teamCount} 位，目前只有 ${healers.length} 位</div>`;
+            return;
+        }
+
+        // 洗牌 (Fisher-Yates Shuffle)
+        const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
+        shuffle(tanks);
+        shuffle(healers);
+        shuffle(dps);
+
+        let htmlOutput = "";
+
+        for(let i=0; i<teamCount; i++) {
+            const t = tanks[i];
+            const h = healers[i];
+            
+            // 補滿4人
+            let currentTeamDps = [];
+            for(let j=0; j<2; j++) {
+                if(dps.length > 0) currentTeamDps.push(dps.shift());
+                else currentTeamDps.push("(缺員)");
+            }
+
+            htmlOutput += `
+            <div class="team-block">
+                <div style="font-size:1.2em; margin-bottom:5px; border-bottom:1px solid #444;">【第 ${i+1} 小隊】</div>
+                <div>🛡️ <span class="t-text">${t}</span></div>
+                <div>💚 <span class="h-text">${h}</span></div>
+                <div>⚔️ <span class="d-text">${currentTeamDps.join(", ")}</span></div>
+            </div>`;
+        }
+
+        // 候補區
+        const leftTanks = tanks.slice(teamCount);
+        const leftHealers = healers.slice(teamCount);
+        
+        if(dps.length > 0 || leftTanks.length > 0 || leftHealers.length > 0) {
+            htmlOutput += `<div class="team-block" style="border-left-color: #888;">
+                <div style="color:#aaa;">【候補 / 未分配】</div>
+                ${leftTanks.length ? `<div>T: ${leftTanks.join(", ")}</div>` : ""}
+                ${leftHealers.length ? `<div>H: ${leftHealers.join(", ")}</div>` : ""}
+                ${dps.length ? `<div>D: ${dps.join(", ")}</div>` : ""}
+            </div>`;
+        }
+
+        resultArea.innerHTML = htmlOutput;
+    }
+
+    // 啟動
+    init();
+
+</script>
+</body>
+</html>
