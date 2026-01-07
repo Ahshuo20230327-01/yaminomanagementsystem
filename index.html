@@ -3,253 +3,312 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14百萬亞米諾旅團工會懶人組隊分組器</title>
+    <title>FF14 百萬亞米諾旅團 | Gemini AI Core</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #2f3136;
-            --panel-color: #36393f;
-            --text-color: #dcddde;
-            --accent-color: #7289da;
-            --border-color: #202225;
-            --tank-color: #4d86f7;
-            --healer-color: #63ba5e;
-            --dps-color: #e85d58;
+            --bg-color: #131314;
+            --surface-color: #1E1F20;
+            --primary-color: #A8C7FA;
+            --on-surface: #E3E3E3;
+            --secondary-text: #C4C7C5;
+            --border-color: #444746;
+            --btn-hover: #2B2C2E;
+            --tank-color: #669df6;
+            --healer-color: #81c995;
+            --dps-color: #f28b82;
+            --ai-accent: #c48df6;
         }
 
         body {
-            font-family: "Microsoft JhengHei", "Segoe UI", sans-serif;
+            font-family: 'Roboto', 'Noto Sans TC', sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-color);
+            color: var(--on-surface);
             margin: 0;
             padding: 20px;
             display: flex;
-            flex-direction: column; /* 改為直向排列，讓標題在最上面 */
+            flex-direction: column;
             align-items: center;
+            min-height: 100vh;
         }
 
-        /* 修改點 2：新增標題樣式 */
-        h1.main-title {
+        header {
             text-align: center;
-            color: #fff;
-            margin: 10px 0 20px 0;
-            font-size: 1.8em;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+            margin-top: 20px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 500;
+            margin: 0 0 10px 0;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #4285F4, #9B72CB, #D96570);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* AI 連線狀態標籤 */
+        .ai-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--ai-accent);
+            border: 1px solid rgba(196, 141, 246, 0.3);
+            box-shadow: 0 0 10px rgba(196, 141, 246, 0.1);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #44d7b6;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #44d7b6;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
         }
 
         .container {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
-            max-width: 1200px;
+            gap: 24px;
+            max-width: 1000px;
             width: 100%;
             justify-content: center;
         }
 
-        .panel {
-            background-color: var(--panel-color);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        .card {
+            background-color: var(--surface-color);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             flex: 1;
-            min-width: 300px;
+            min-width: 320px;
+            border: 1px solid transparent;
+            transition: border-color 0.3s;
         }
+
+        .card:hover { border-color: #555; }
 
         h2 {
+            font-size: 1.2rem;
             margin-top: 0;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
-            font-size: 1.3em;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            color: var(--on-surface);
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        input[type="number"] {
-            background: #202225;
-            border: 1px solid #000;
-            color: white;
-            padding: 5px;
-            border-radius: 4px;
-            width: 60px;
-            font-size: 1.2em;
-            text-align: center;
+        .input-group {
+            background-color: #28292A;
+            border-radius: 50px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
         }
 
-        /* 名單列表樣式 */
+        input[type="number"] {
+            background: transparent;
+            border: none;
+            color: var(--on-surface);
+            font-size: 1.1rem;
+            width: 50px;
+            text-align: right;
+            outline: none;
+        }
+
+        .roster-list { display: flex; flex-direction: column; gap: 8px; }
+
         .roster-item {
             display: flex;
             align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 12px;
+            transition: background 0.2s;
         }
+        .roster-item:hover { background-color: var(--btn-hover); }
 
-        .roster-item:last-child { border-bottom: none; }
-
-        .name-label {
-            flex: 1;
-            font-size: 1.1em;
-            margin-left: 10px;
+        .custom-checkbox {
+            appearance: none;
+            background-color: transparent;
+            margin: 0;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--secondary-text);
+            border-radius: 4px;
+            display: grid;
+            place-content: center;
             cursor: pointer;
+            margin-right: 12px;
         }
+        .custom-checkbox::before {
+            content: "";
+            width: 10px;
+            height: 10px;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em var(--bg-color);
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+        .custom-checkbox:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        .custom-checkbox:checked::before { transform: scale(1); }
+
+        .name-label { flex: 1; font-size: 1rem; cursor: pointer; color: var(--on-surface); }
 
         .role-selector {
-            display: flex;
-            gap: 8px;
+            display: flex; gap: 4px; background: #28292A; border-radius: 50px; padding: 2px;
         }
-
         .role-btn {
-            cursor: pointer;
-            padding: 4px 10px;
-            border-radius: 4px;
-            border: 1px solid #444;
-            background: #2f3136;
-            color: #888;
-            font-weight: bold;
-            font-size: 0.9em;
-            transition: all 0.2s;
+            cursor: pointer; padding: 4px 12px; border-radius: 50px; color: var(--secondary-text);
+            font-size: 0.8rem; font-weight: 500; transition: all 0.2s;
         }
-
-        /* 職能選取後的顏色 */
         input[type="radio"] { display: none; }
         
-        input[value="T"]:checked + span { background: var(--tank-color); color: white; border-color: var(--tank-color); }
-        input[value="H"]:checked + span { background: var(--healer-color); color: white; border-color: var(--healer-color); }
-        input[value="D"]:checked + span { background: var(--dps-color); color: white; border-color: var(--dps-color); }
+        input[value="T"]:checked + span { background-color: rgba(102, 157, 246, 0.2); color: var(--tank-color); }
+        input[value="H"]:checked + span { background-color: rgba(129, 201, 149, 0.2); color: var(--healer-color); }
+        input[value="D"]:checked + span { background-color: rgba(242, 139, 130, 0.2); color: var(--dps-color); }
 
         .manual-input {
-            background: #202225;
-            border: 1px solid #444;
-            color: white;
-            padding: 5px;
-            border-radius: 4px;
-            width: 120px;
-            font-size: 1em;
+            background: transparent; border: none; border-bottom: 1px solid var(--secondary-text);
+            color: var(--on-surface); padding: 4px; width: 100px; outline: none;
         }
+        .manual-input:focus { border-bottom-color: var(--primary-color); }
 
-        button.main-btn {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1.2em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 20px;
+        .generate-btn {
+            width: 100%; margin-top: 24px; padding: 16px; border-radius: 50px; border: none;
+            background: linear-gradient(135deg, #E2E2E2, #FFFFFF);
+            color: #000; font-size: 1.1rem; font-weight: 500; cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
         }
-
-        button.main-btn:hover { background-color: #5b6eae; }
+        .generate-btn:hover { opacity: 0.9; }
+        .generate-btn:active { transform: scale(0.98); }
 
         /* 結果顯示區 */
-        #result-area {
-            white-space: pre-wrap;
-            font-family: "Consolas", monospace;
-            font-size: 1.1em;
-            line-height: 1.6;
+        .result-box {
+            font-family: 'Roboto', sans-serif;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+        .team-card {
+            background-color: transparent;
+            border-left: 2px solid var(--border-color);
+            padding-left: 20px;
+            animation: fadeIn 0.5s ease backwards;
+        }
+        .team-title {
+            font-size: 0.9rem; margin-bottom: 8px; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 1px;
+        }
+        .team-member {
+            margin: 6px 0; font-size: 1.1rem;
         }
 
-        .team-block {
-            background: #202225;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            border-left: 5px solid var(--accent-color);
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .t-text { color: var(--tank-color); font-weight: bold; }
-        .h-text { color: var(--healer-color); font-weight: bold; }
-        .d-text { color: var(--dps-color); font-weight: bold; }
-        .warn { color: #ffcc00; font-weight: bold; }
-        .err { color: #ff4444; font-weight: bold; }
-
-        /* 手機版優化 */
         @media (max-width: 768px) {
             .container { flex-direction: column; }
-            .panel { width: 100%; min-width: auto; }
+            .card { width: auto; }
+            .generate-btn { position: sticky; bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); z-index: 10; }
         }
-
     </style>
 </head>
 <body>
 
-<h1 class="main-title">FF14百萬亞米諾旅團工會懶人組隊分組器</h1>
+<header>
+    <h1>FF14 百萬亞米諾旅團</h1>
+    <div class="ai-badge">
+        <span class="status-dot"></span>
+        Gemini direct access to google AI
+    </div>
+</header>
 
 <div class="container">
-    <div class="panel" style="order: 2;">
-        <h2>📝 出席與職能設定</h2>
+    <div class="card" style="order: 2;">
+        <h2>📝 任務參數 (Parameters)</h2>
         
         <div class="input-group">
-            <label>預計隊伍數量：</label>
+            <label>Squadron Count</label>
             <input type="number" id="teamCount" value="2" min="1">
         </div>
 
-        <div id="roster-list">
-            </div>
+        <div id="roster-list" class="roster-list"></div>
 
-        <div style="margin-top: 15px; border-top: 1px dashed #555; padding-top:10px;">
-            <p style="color:#888; margin:0 0 10px 0; font-size: 0.9em;">--- 手動輸入區 (外找/野人) ---</p>
-            <div id="manual-list">
-                </div>
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+            <label style="color: var(--secondary-text); font-size: 0.8rem; margin-bottom: 10px; display:block;">External Units</label>
+            <div id="manual-list" class="roster-list"></div>
         </div>
 
-        <button class="main-btn" onclick="generateTeams()">開始隨機分組</button>
+        <button class="generate-btn" onclick="generateTeams()">
+            ✧ 生成最佳化編制
+        </button>
     </div>
 
-    <div class="panel" style="order: 1;">
-        <h2>📊 分組結果</h2>
-        <div id="result-area">
-            <div style="color: #888; text-align: center; margin-top: 50px;">
-                請在右側(或下方)<br>勾選出席人員並設定職能<br>最後按下按鈕
+    <div class="card" style="order: 1;">
+        <h2>📊 分析結果 (Response)</h2>
+        <div id="result-area" class="result-box">
+            <div style="color: var(--secondary-text); margin-top: 40px; display:flex; gap:15px; align-items:flex-start;">
+                <span style="font-size: 1.5rem;">✨</span>
+                <div style="line-height: 1.5;">
+                    你好，我是你的公會分配助手。<br>
+                    請在右側設定人員名單，我將為你計算最佳的分組配置。
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    // [更新點] 加入新成員 窩福
     const PRESET_NAMES = [
         "色素", "r冷", "春捲", "希妮", "Evas", 
-        "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉"
+        "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", "窩福"
     ];
 
-    // 初始化頁面
     function init() {
         const rosterDiv = document.getElementById('roster-list');
-        
         PRESET_NAMES.forEach((name, index) => {
             const html = `
                 <div class="roster-item">
-                    <input type="checkbox" id="check_${index}" style="transform: scale(1.5); cursor:pointer;">
+                    <input type="checkbox" id="check_${index}" class="custom-checkbox">
                     <label class="name-label" for="check_${index}">${name}</label>
                     <div class="role-selector">
                         <label><input type="radio" name="role_${index}" value="T"><span class="role-btn">T</span></label>
                         <label><input type="radio" name="role_${index}" value="H"><span class="role-btn">H</span></label>
                         <label><input type="radio" name="role_${index}" value="D" checked><span class="role-btn">D</span></label>
                     </div>
-                </div>
-            `;
+                </div>`;
             rosterDiv.insertAdjacentHTML('beforeend', html);
         });
-
+        
         const manualDiv = document.getElementById('manual-list');
         for(let i=0; i<2; i++) {
-            const mIndex = 100 + i; // 避免 ID 衝突
+            const mIndex = 100 + i;
             const html = `
                 <div class="roster-item">
-                    <input type="checkbox" id="check_${mIndex}">
-                    <input type="text" id="name_${mIndex}" class="manual-input" placeholder="輸入ID...">
+                    <input type="checkbox" id="check_${mIndex}" class="custom-checkbox">
+                    <input type="text" id="name_${mIndex}" class="manual-input" placeholder="輸入ID">
                     <div class="role-selector" style="margin-left: auto;">
                         <label><input type="radio" name="role_${mIndex}" value="T"><span class="role-btn">T</span></label>
                         <label><input type="radio" name="role_${mIndex}" value="H"><span class="role-btn">H</span></label>
                         <label><input type="radio" name="role_${mIndex}" value="D" checked><span class="role-btn">D</span></label>
                     </div>
-                </div>
-            `;
+                </div>`;
             manualDiv.insertAdjacentHTML('beforeend', html);
         }
     }
@@ -284,22 +343,15 @@
             }
         }
 
-        // 驗證
-        const total = tanks.length + healers.length + dps.length;
-        if(total === 0) {
-            resultArea.innerHTML = '<div class="err">❌ 請至少勾選一位出席者</div>';
-            return;
-        }
-        if(tanks.length < teamCount) {
-            resultArea.innerHTML = `<div class="err">❌ 缺坦警告：需要 ${teamCount} 位，目前只有 ${tanks.length} 位</div>`;
-            return;
-        }
-        if(healers.length < teamCount) {
-            resultArea.innerHTML = `<div class="err">❌ 缺補警告：需要 ${teamCount} 位，目前只有 ${healers.length} 位</div>`;
-            return;
-        }
+        const showError = (msg) => {
+            resultArea.innerHTML = `<div style="background:#3c1e1e; color:#f28b82; padding:15px; border-radius:12px; border:1px solid #f28b82;">⚠️ ${msg}</div>`;
+        };
 
-        // 洗牌 (Fisher-Yates Shuffle)
+        const total = tanks.length + healers.length + dps.length;
+        if(total === 0) return showError("請至少勾選一位出席者");
+        if(tanks.length < teamCount) return showError(`坦克不足：需要 ${teamCount} 位，目前 ${tanks.length} 位`);
+        if(healers.length < teamCount) return showError(`補師不足：需要 ${teamCount} 位，目前 ${healers.length} 位`);
+
         const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
         shuffle(tanks);
         shuffle(healers);
@@ -310,42 +362,37 @@
         for(let i=0; i<teamCount; i++) {
             const t = tanks[i];
             const h = healers[i];
-            
-            // 補滿4人
             let currentTeamDps = [];
             for(let j=0; j<2; j++) {
-                if(dps.length > 0) currentTeamDps.push(dps.shift());
-                else currentTeamDps.push("(缺員)");
+                currentTeamDps.push(dps.length > 0 ? dps.shift() : "<span style='opacity:0.5'>(缺員)</span>");
             }
 
             htmlOutput += `
-            <div class="team-block">
-                <div style="font-size:1.2em; margin-bottom:5px; border-bottom:1px solid #444;">【第 ${i+1} 小隊】</div>
-                <div>🛡️ <span class="t-text">${t}</span></div>
-                <div>💚 <span class="h-text">${h}</span></div>
-                <div>⚔️ <span class="d-text">${currentTeamDps.join(", ")}</span></div>
+            <div class="team-card" style="animation: fadeIn 0.5s ease backwards; animation-delay: ${i*0.1}s">
+                <div class="team-title">Team 0${i+1}</div>
+                <div class="team-member"><span style="color:var(--tank-color)">🛡️ ${t}</span></div>
+                <div class="team-member"><span style="color:var(--healer-color)">💚 ${h}</span></div>
+                <div class="team-member"><span style="color:var(--dps-color)">⚔️ ${currentTeamDps.join(" , ")}</span></div>
             </div>`;
         }
 
-        // 候補區
         const leftTanks = tanks.slice(teamCount);
         const leftHealers = healers.slice(teamCount);
         
         if(dps.length > 0 || leftTanks.length > 0 || leftHealers.length > 0) {
-            htmlOutput += `<div class="team-block" style="border-left-color: #888;">
-                <div style="color:#aaa;">【候補 / 未分配】</div>
-                ${leftTanks.length ? `<div>T: ${leftTanks.join(", ")}</div>` : ""}
-                ${leftHealers.length ? `<div>H: ${leftHealers.join(", ")}</div>` : ""}
-                ${dps.length ? `<div>D: ${dps.join(", ")}</div>` : ""}
+            htmlOutput += `
+            <div class="team-card" style="border-left-color: #555; animation: fadeIn 0.5s ease backwards; animation-delay: 0.3s">
+                <div class="team-title">候 補 / 待 機</div>
+                ${leftTanks.length ? `<div class="team-member" style="color:var(--tank-color)">T: ${leftTanks.join(", ")}</div>` : ""}
+                ${leftHealers.length ? `<div class="team-member" style="color:var(--healer-color)">H: ${leftHealers.join(", ")}</div>` : ""}
+                ${dps.length ? `<div class="team-member" style="color:var(--dps-color)">D: ${dps.join(", ")}</div>` : ""}
             </div>`;
         }
 
         resultArea.innerHTML = htmlOutput;
     }
 
-    // 啟動
     init();
-
 </script>
 </body>
 </html>
