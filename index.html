@@ -3,288 +3,570 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬亞米諾旅團 | 分組系統</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <title>FF14 百萬亞米諾旅團 | Duty Finder</title>
+    <!-- 引入 FF14 風格字體 Cinzel (英文標題用) 與 Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #131314;
-            --surface-color: #1E1F20;
-            --primary-color: #A8C7FA;
-            --on-surface: #E3E3E3;
-            --secondary-text: #C4C7C5;
-            --border-color: #444746;
-            --btn-hover: #2B2C2E;
-            --tank-color: #669df6;
-            --healer-color: #81c995;
-            --dps-color: #f28b82;
+            /* FF14 經典色票 */
+            --bg-dark: #121212;
+            --panel-bg: rgba(20, 20, 20, 0.95);
+            --border-gold: #c6a86b;
+            --border-dim: #4a4a4a;
+            --text-gold: #d4b57e;
+            --text-white: #e0e0e0;
+            --text-dim: #888;
+            
+            /* 職能顏色 (霓虹光感) */
+            --tank-glow: rgba(74, 144, 226, 0.6);
+            --tank-solid: #4a90e2;
+            --healer-glow: rgba(126, 211, 33, 0.6);
+            --healer-solid: #7ed321;
+            --dps-glow: rgba(208, 2, 27, 0.6);
+            --dps-solid: #d0021b;
         }
 
+        * { box-sizing: border-box; user-select: none; }
+
         body {
-            font-family: 'Roboto', 'Noto Sans TC', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--on-surface);
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-dark);
+            /* 背景材質感 */
+            background-image: radial-gradient(circle at center, #2a2a2a 0%, #000 100%);
+            color: var(--text-white);
             margin: 0;
             padding: 20px;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
         }
 
+        /* --- 頭部設計 --- */
         header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             margin-top: 20px;
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            border-bottom: 1px solid rgba(198, 168, 107, 0.3);
+            padding-bottom: 20px;
+        }
+
+        header::after {
+            /* 金色光暈裝飾線 */
+            content: "";
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-gold), transparent);
+            box-shadow: 0 0 10px var(--border-gold);
         }
 
         h1 {
-            font-size: 1.8rem;
-            font-weight: 500;
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--text-gold);
             margin: 0;
-            letter-spacing: 1px;
-            background: linear-gradient(90deg, #4285F4, #9B72CB, #D96570);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(198, 168, 107, 0.4);
+            text-transform: uppercase;
         }
 
         .subtitle {
-            color: var(--secondary-text);
+            font-family: 'Noto Sans TC', sans-serif;
+            color: var(--text-dim);
             font-size: 0.9rem;
             margin-top: 8px;
-            opacity: 0.8;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
 
+        /* --- 主容器 --- */
         .container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            max-width: 1000px;
+            display: grid;
+            grid-template-columns: 380px 1fr; /* 左選單固定，右結果自適應 */
+            gap: 25px;
+            max-width: 1200px;
             width: 100%;
-            justify-content: center;
+            animation: fadeIn 0.8s ease-out;
         }
 
-        .card {
-            background-color: var(--surface-color);
-            border-radius: 24px;
-            padding: 24px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            flex: 1;
-            min-width: 320px;
-            border: 1px solid transparent;
+        /* --- 面板通用樣式 (FF14 UI 風格) --- */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-dim);
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            backdrop-filter: blur(5px);
             transition: border-color 0.3s;
         }
 
-        .card:hover { border-color: #555; }
+        .panel:hover {
+            border-color: rgba(198, 168, 107, 0.4);
+        }
 
-        h2 {
-            font-size: 1.2rem;
-            margin-top: 0;
+        /* 面板角落金色裝飾 */
+        .panel::before, .panel::after {
+            content: "";
+            position: absolute;
+            width: 8px; height: 8px;
+            transition: all 0.3s;
+        }
+        .panel::before { top: -1px; left: -1px; border-top: 2px solid var(--border-gold); border-left: 2px solid var(--border-gold); }
+        .panel::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--border-gold); border-right: 2px solid var(--border-gold); }
+
+        .panel-header {
+            font-family: 'Cinzel', serif;
+            color: var(--text-gold);
+            font-size: 1rem;
             margin-bottom: 20px;
-            color: var(--on-surface);
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .panel-hint {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            letter-spacing: 0;
+            text-transform: none;
+        }
+
+        /* --- 名單卡片 (Roster Item) --- */
+        .roster-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* 自訂捲軸 */
+        .roster-grid::-webkit-scrollbar { width: 4px; }
+        .roster-grid::-webkit-scrollbar-track { background: #111; }
+        .roster-grid::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+        .roster-grid::-webkit-scrollbar-thumb:hover { background: var(--text-gold); }
+
+        .roster-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(90deg, rgba(255,255,255,0.03), transparent);
+            padding: 10px 15px;
+            border-radius: 4px;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .roster-card:hover {
+            background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
+        }
+
+        /* 選中狀態 */
+        .roster-card.active {
+            background: linear-gradient(90deg, rgba(198, 168, 107, 0.15), transparent);
+            border-left-color: var(--text-gold);
+        }
+        .roster-card.active .roster-name {
+            color: var(--text-gold);
+            text-shadow: 0 0 8px rgba(198, 168, 107, 0.5);
+        }
+
+        .roster-name {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            transition: color 0.2s;
+        }
+
+        /* 職能切換器 */
+        .role-switch {
+            display: flex;
+            gap: 8px;
+        }
+
+        .role-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #555;
+            background: #222;
+            border: 1px solid #444;
+            transition: all 0.2s;
+        }
+
+        .role-icon:hover { transform: scale(1.1); }
+
+        /* 職能激活狀態 */
+        .role-icon.t-active {
+            background: rgba(74, 144, 226, 0.2);
+            border-color: var(--tank-solid);
+            color: var(--tank-solid);
+            box-shadow: 0 0 8px var(--tank-glow);
+        }
+        .role-icon.h-active {
+            background: rgba(126, 211, 33, 0.2);
+            border-color: var(--healer-solid);
+            color: var(--healer-solid);
+            box-shadow: 0 0 8px var(--healer-glow);
+        }
+        .role-icon.d-active {
+            background: rgba(208, 2, 27, 0.2);
+            border-color: var(--dps-solid);
+            color: var(--dps-solid);
+            box-shadow: 0 0 8px var(--dps-glow);
+        }
+
+        /* 手動輸入框 */
+        .manual-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #444;
+            color: var(--text-white);
+            font-family: inherit;
+            padding: 4px;
+            width: 120px;
+            transition: border 0.3s;
+        }
+        .manual-input:focus {
+            outline: none;
+            border-bottom-color: var(--text-gold);
+        }
+
+        /* --- 控制列 --- */
+        .control-bar {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .team-input-group {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .input-group {
-            background-color: #28292A;
-            border-radius: 50px;
-            padding: 8px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        input[type="number"] {
-            background: transparent;
-            border: none;
-            color: var(--on-surface);
-            font-size: 1.1rem;
-            width: 50px;
-            text-align: right;
-            outline: none;
-        }
-
-        .roster-list { display: flex; flex-direction: column; gap: 8px; }
-
-        .roster-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            border-radius: 12px;
-            transition: background 0.2s;
-        }
-        .roster-item:hover { background-color: var(--btn-hover); }
-
-        .custom-checkbox {
-            appearance: none;
-            background-color: transparent;
-            margin: 0;
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--secondary-text);
+        .team-count-input {
+            background: #111;
+            border: 1px solid #555;
+            color: var(--text-gold);
+            padding: 8px;
+            width: 60px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-family: 'Cinzel', serif;
             border-radius: 4px;
-            display: grid;
-            place-content: center;
+        }
+
+        /* --- DUTY FINDER 按鈕 (核心) --- */
+        .duty-btn {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(180deg, #5c4d38 0%, #3d3122 100%);
+            border: 1px solid var(--text-gold);
+            color: #fff;
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            padding: 12px;
             cursor: pointer;
-            margin-right: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+            overflow: hidden;
+            border-radius: 2px;
         }
-        .custom-checkbox::before {
+
+        .duty-btn:hover {
+            background: linear-gradient(180deg, #7c684b 0%, #4d3e2b 100%);
+            text-shadow: 0 0 10px #fff;
+            box-shadow: 0 0 15px var(--border-gold);
+        }
+
+        .duty-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* 掃光特效 */
+        .duty-btn::after {
             content: "";
-            width: 10px;
-            height: 10px;
-            transform: scale(0);
-            transition: 120ms transform ease-in-out;
-            box-shadow: inset 1em 1em var(--bg-color);
-            transform-origin: center;
-            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
         }
-        .custom-checkbox:checked {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
+        .duty-btn:hover::after {
+            left: 100%;
         }
-        .custom-checkbox:checked::before { transform: scale(1); }
 
-        .name-label { flex: 1; font-size: 1rem; cursor: pointer; color: var(--on-surface); }
+        /* --- 結果區 --- */
+        .result-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
 
-        .role-selector {
-            display: flex; gap: 4px; background: #28292A; border-radius: 50px; padding: 2px;
-        }
-        .role-btn {
-            cursor: pointer; padding: 4px 12px; border-radius: 50px; color: var(--secondary-text);
-            font-size: 0.8rem; font-weight: 500; transition: all 0.2s;
-        }
-        input[type="radio"] { display: none; }
-        
-        input[value="T"]:checked + span { background-color: rgba(102, 157, 246, 0.2); color: var(--tank-color); }
-        input[value="H"]:checked + span { background-color: rgba(129, 201, 149, 0.2); color: var(--healer-color); }
-        input[value="D"]:checked + span { background-color: rgba(242, 139, 130, 0.2); color: var(--dps-color); }
-
-        .manual-input {
-            background: transparent; border: none; border-bottom: 1px solid var(--secondary-text);
-            color: var(--on-surface); padding: 4px; width: 100px; outline: none;
-        }
-        .manual-input:focus { border-bottom-color: var(--primary-color); }
-
-        .generate-btn {
-            width: 100%; margin-top: 24px; padding: 16px; border-radius: 50px; border: none;
-            background: linear-gradient(135deg, #E2E2E2, #FFFFFF);
-            color: #000; font-size: 1.1rem; font-weight: 500; cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-        }
-        .generate-btn:hover { opacity: 0.9; }
-        .generate-btn:active { transform: scale(0.98); }
-
-        /* 結果顯示區 */
-        .result-box {
-            font-family: 'Roboto', sans-serif;
-            display: flex; flex-direction: column; gap: 20px;
-        }
-        .team-card {
-            background-color: transparent;
-            border-left: 2px solid var(--border-color);
-            padding-left: 20px;
+        .party-list {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
             animation: fadeIn 0.5s ease backwards;
         }
-        .team-title {
-            font-size: 0.9rem; margin-bottom: 8px; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 1px;
-        }
-        .team-member {
-            margin: 6px 0; font-size: 1.1rem;
+
+        .party-header {
+            background: rgba(198, 168, 107, 0.1);
+            color: var(--text-gold);
+            font-family: 'Cinzel', serif;
+            padding: 10px 15px;
+            font-size: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .party-member {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .party-member:last-child { border-bottom: none; }
 
-        @media (max-width: 768px) {
-            .container { flex-direction: column; }
-            .card { width: auto; }
-            .generate-btn { position: sticky; bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); z-index: 10; }
+        /* 職能圖示 (SVG) */
+        .job-icon {
+            width: 24px; height: 24px;
+        }
+        .job-icon.tank svg { fill: var(--tank-solid); filter: drop-shadow(0 0 5px var(--tank-glow)); }
+        .job-icon.healer svg { fill: var(--healer-solid); filter: drop-shadow(0 0 5px var(--healer-glow)); }
+        .job-icon.dps svg { fill: var(--dps-solid); filter: drop-shadow(0 0 5px var(--dps-glow)); }
+        
+        .member-name { font-size: 1.1rem; }
+        .member-missing { color: #555; font-style: italic; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* RWD */
+        @media (max-width: 850px) {
+            .container { grid-template-columns: 1fr; }
+            .control-bar { flex-direction: column; align-items: stretch; }
+            .duty-btn { width: 100%; }
         }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>FF14 百萬亞米諾旅團</h1>
-    <p class="subtitle">Intelligent Team Allocation System</p>
+    <h1>Duty Finder</h1>
+    <div class="subtitle">百萬亞米諾旅團 分組系統</div>
 </header>
 
 <div class="container">
-    <div class="card" style="order: 2;">
-        <h2>📝 出席名單與職能</h2>
-        
-        <div class="input-group">
-            <label>預計隊伍數量</label>
-            <input type="number" id="teamCount" value="2" min="1" max="4">
+    <!-- 左側：冒險者名單 -->
+    <div class="panel">
+        <div class="panel-header">
+            ADVENTURER POOL
+            <span class="panel-hint">請點擊選擇 / 切換職能</span>
         </div>
 
-        <div id="roster-list" class="roster-list"></div>
-
-        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
-            <label style="color: var(--secondary-text); font-size: 0.8rem; margin-bottom: 10px; display:block;">--- 手動輸入區 (外找/野人) ---</label>
-            <div id="manual-list" class="roster-list"></div>
+        <div id="roster-grid" class="roster-grid">
+            <!-- JS 自動生成 -->
         </div>
 
-        <button class="generate-btn" onclick="generateTeams()">
-            開始隨機分組
-        </button>
+        <div style="margin-top:20px; padding-top:15px; border-top:1px solid #333;">
+            <div class="panel-header" style="font-size:0.9rem; border:none; margin-bottom:10px;">
+                EXTERNAL UNITS (外找支援)
+            </div>
+            <div id="manual-grid" class="roster-grid">
+                <!-- JS 自動生成手動區 -->
+            </div>
+        </div>
     </div>
 
-    <div class="card" style="order: 1;">
-        <h2>📊 分組結果</h2>
-        <div id="result-area" class="result-box">
-            <div style="color: var(--secondary-text); margin-top: 40px; display:flex; gap:15px; align-items:flex-start;">
-                <span style="font-size: 1.5rem;">✨</span>
-                <div style="line-height: 1.5;">
-                    請在右側勾選出席人員<br>
-                    並確認職能後按下按鈕
-                </div>
+    <!-- 右側：控制與結果 -->
+    <div>
+        <div class="control-bar">
+            <div class="team-input-group">
+                <label style="color:var(--text-gold); font-family:'Cinzel', serif;">PARTIES</label>
+                <input type="number" id="teamCount" class="team-count-input" value="2" min="1" max="4">
+            </div>
+            <button class="duty-btn" onclick="generateTeams()">
+                Commence Duty
+            </button>
+        </div>
+        <div style="text-align:right; color:#666; font-size:0.8rem; margin-top:-15px; margin-bottom:15px; padding-right:5px;">
+            * 系統將優先填滿第 1 小隊
+        </div>
+
+        <div id="result-area" class="result-container">
+            <div style="grid-column: 1 / -1; text-align: center; color: #444; padding: 60px; border: 2px dashed #333; border-radius:10px;">
+                <div style="font-size:2rem; margin-bottom:10px; opacity:0.3;">⚔️</div>
+                Awaiting Orders...<br>請設定成員後點擊 Commence Duty
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    // 內建 SVG 圖示路徑 (為了單一檔案不依賴外部連結)
+    const ICONS = {
+        tank: '<svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>',
+        healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
+        dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>'
+    };
+
+    // V2.8 完整名單
     const PRESET_NAMES = [
         "色素", "r冷", "春捲", "希妮", "Evas", 
         "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
         "窩福", "NANA"
     ];
 
+    // 狀態管理
+    // role: 'D' (預設 DPS)
+    // selected: false (預設不選)
+    let rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D' }));
+    
+    // 手動區狀態
+    let manualState = [
+        { id: 'm1', name: '', selected: false, role: 'D' },
+        { id: 'm2', name: '', selected: false, role: 'D' }
+    ];
+
     function init() {
-        const rosterDiv = document.getElementById('roster-list');
-        PRESET_NAMES.forEach((name, index) => {
-            const html = `
-                <div class="roster-item">
-                    <input type="checkbox" id="check_${index}" class="custom-checkbox">
-                    <label class="name-label" for="check_${index}">${name}</label>
-                    <div class="role-selector">
-                        <label><input type="radio" name="role_${index}" value="T"><span class="role-btn">T</span></label>
-                        <label><input type="radio" name="role_${index}" value="H"><span class="role-btn">H</span></label>
-                        <label><input type="radio" name="role_${index}" value="D" checked><span class="role-btn">D</span></label>
-                    </div>
-                </div>`;
-            rosterDiv.insertAdjacentHTML('beforeend', html);
-        });
-        
-        const manualDiv = document.getElementById('manual-list');
-        for(let i=0; i<2; i++) {
-            const mIndex = 100 + i;
-            const html = `
-                <div class="roster-item">
-                    <input type="checkbox" id="check_${mIndex}" class="custom-checkbox">
-                    <input type="text" id="name_${mIndex}" class="manual-input" placeholder="輸入ID">
-                    <div class="role-selector" style="margin-left: auto;">
-                        <label><input type="radio" name="role_${mIndex}" value="T"><span class="role-btn">T</span></label>
-                        <label><input type="radio" name="role_${mIndex}" value="H"><span class="role-btn">H</span></label>
-                        <label><input type="radio" name="role_${mIndex}" value="D" checked><span class="role-btn">D</span></label>
-                    </div>
-                </div>`;
-            manualDiv.insertAdjacentHTML('beforeend', html);
-        }
+        renderRoster();
+        renderManual();
     }
+
+    // 渲染固定名單
+    function renderRoster() {
+        const grid = document.getElementById('roster-grid');
+        grid.innerHTML = '';
+        
+        rosterState.forEach((member, index) => {
+            const card = document.createElement('div');
+            card.className = `roster-card ${member.selected ? 'active' : ''}`;
+            
+            // 點擊卡片本身切換選取狀態
+            card.onclick = (e) => {
+                // 如果點到的是職能按鈕，不要觸發卡片選取
+                if(e.target.closest('.role-icon')) return;
+                toggleSelect(index);
+            };
+
+            card.innerHTML = `
+                <div class="roster-name">${member.name}</div>
+                <div class="role-switch">
+                    ${createRoleBtn(index, 'T', member.role)}
+                    ${createRoleBtn(index, 'H', member.role)}
+                    ${createRoleBtn(index, 'D', member.role)}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // 渲染手動區
+    function renderManual() {
+        const grid = document.getElementById('manual-grid');
+        grid.innerHTML = '';
+
+        manualState.forEach((m, index) => {
+            const card = document.createElement('div');
+            card.className = `roster-card ${m.selected ? 'active' : ''}`;
+            card.style.cursor = 'default';
+
+            card.innerHTML = `
+                <input type="text" class="manual-input" placeholder="輸入 ID..." value="${m.name}" oninput="updateManualName(${index}, this.value)">
+                <div class="role-switch">
+                    ${createManualRoleBtn(index, 'T', m.role)}
+                    ${createManualRoleBtn(index, 'H', m.role)}
+                    ${createManualRoleBtn(index, 'D', m.role)}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // 產生職能按鈕 HTML
+    function createRoleBtn(index, type, currentRole) {
+        const activeClass = (currentRole === type) ? `${type.toLowerCase()}-active` : '';
+        return `<div class="role-icon ${activeClass}" onclick="setRole(${index}, '${type}')">${type}</div>`;
+    }
+
+    function createManualRoleBtn(index, type, currentRole) {
+        const activeClass = (currentRole === type) ? `${type.toLowerCase()}-active` : '';
+        return `<div class="role-icon ${activeClass}" onclick="setManualRole(${index}, '${type}')">${type}</div>`;
+    }
+
+    // --- 互動邏輯 ---
+
+    function toggleSelect(index) {
+        rosterState[index].selected = !rosterState[index].selected;
+        renderRoster();
+    }
+
+    function setRole(index, role) {
+        rosterState[index].role = role;
+        rosterState[index].selected = true; // 點職能自動勾選
+        renderRoster();
+    }
+
+    function updateManualName(index, val) {
+        manualState[index].name = val;
+        if(val && !manualState[index].selected) {
+            manualState[index].selected = true;
+        } else if (!val) {
+            manualState[index].selected = false;
+        }
+        renderManual(); // 重新渲染以更新樣式
+        // 注意：重新渲染會導致 input 失去焦點，這裡為了簡單省略 focus 處理，
+        // 實際體驗中，因為只更新 class，input 的 value 屬性在 HTML 字串中被更新
+        // 更好的做法是只操作 DOM class，但為了代碼簡潔，這裡做全渲染
+        // *修正*：為了避免打字中斷，我們手動把焦點抓回來
+        setTimeout(() => {
+            const inputs = document.querySelectorAll('.manual-input');
+            if(inputs[index]) {
+                inputs[index].focus(); 
+                inputs[index].setSelectionRange(100, 100); // 光標移到最後
+            }
+        }, 0);
+    }
+
+    function setManualRole(index, role) {
+        manualState[index].role = role;
+        if(manualState[index].name) manualState[index].selected = true;
+        renderManual();
+    }
+
+    // --- 核心分組邏輯 (V2.8/3.0 優先滿團版) ---
 
     function generateTeams() {
         const teamCount = parseInt(document.getElementById('teamCount').value);
@@ -293,77 +575,81 @@
         let tanks = [], healers = [], dps = [];
 
         // 收集固定名單
-        PRESET_NAMES.forEach((name, index) => {
-            if(document.getElementById(`check_${index}`).checked) {
-                const role = document.querySelector(`input[name="role_${index}"]:checked`).value;
-                if(role === 'T') tanks.push(name);
-                else if(role === 'H') healers.push(name);
-                else dps.push(name);
+        rosterState.forEach(m => {
+            if(m.selected) {
+                if(m.role === 'T') tanks.push(m.name);
+                else if(m.role === 'H') healers.push(m.name);
+                else dps.push(m.name);
             }
         });
 
         // 收集手動名單
-        for(let i=0; i<2; i++) {
-            const mIndex = 100 + i;
-            const check = document.getElementById(`check_${mIndex}`).checked;
-            const nameVal = document.getElementById(`name_${mIndex}`).value.trim();
-            if(check && nameVal) {
-                const role = document.querySelector(`input[name="role_${mIndex}"]:checked`).value;
-                const finalName = nameVal + "(手)";
-                if(role === 'T') tanks.push(finalName);
-                else if(role === 'H') healers.push(finalName);
-                else dps.push(finalName);
+        manualState.forEach(m => {
+            if(m.selected && m.name.trim()) {
+                const name = m.name + "(手)";
+                if(m.role === 'T') tanks.push(name);
+                else if(m.role === 'H') healers.push(name);
+                else dps.push(name);
             }
-        }
+        });
 
-        const total = tanks.length + healers.length + dps.length;
-        if(total === 0) {
-            resultArea.innerHTML = `<div style="background:#3c1e1e; color:#f28b82; padding:15px; border-radius:12px; border:1px solid #f28b82;">⚠️ 請至少勾選一位出席者</div>`;
+        if(tanks.length + healers.length + dps.length === 0) {
+            alert("⚠️ 請至少選擇一名成員");
             return;
         }
 
-        // --- 垂直填滿邏輯 (Vertical Fill) ---
-        // 優先把第 1 隊塞滿，再去塞第 2 隊
-        
-        const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
-        shuffle(tanks);
-        shuffle(healers);
-        shuffle(dps);
+        // 洗牌
+        const shuffle = arr => arr.sort(() => Math.random() - 0.5);
+        shuffle(tanks); shuffle(healers); shuffle(dps);
 
         let htmlOutput = "";
 
+        // 垂直填滿 (Priority Fill)
         for(let i=0; i<teamCount; i++) {
-            // 嘗試從各個池子裡抓人，抓不到就顯示缺員
-            const t = tanks.length > 0 ? tanks.shift() : "<span style='opacity:0.5'>(缺員)</span>";
-            const h = healers.length > 0 ? healers.shift() : "<span style='opacity:0.5'>(缺員)</span>";
-            
-            let currentTeamDps = [];
-            // 每隊 2 個 DPS 位置
-            for(let j=0; j<2; j++) {
-                currentTeamDps.push(dps.length > 0 ? dps.shift() : "<span style='opacity:0.5'>(缺員)</span>");
-            }
+            const t = tanks.length ? tanks.shift() : null;
+            const h = healers.length ? healers.shift() : null;
+            const d1 = dps.length ? dps.shift() : null;
+            const d2 = dps.length ? dps.shift() : null;
 
             htmlOutput += `
-            <div class="team-card" style="animation: fadeIn 0.5s ease backwards; animation-delay: ${i*0.1}s">
-                <div class="team-title">【第 ${i+1} 小隊】</div>
-                <div class="team-member"><span style="color:var(--tank-color)">🛡️ T : ${t}</span></div>
-                <div class="team-member"><span style="color:var(--healer-color)">💚 H : ${h}</span></div>
-                <div class="team-member"><span style="color:var(--dps-color)">⚔️ D : ${currentTeamDps.join(" , ")}</span></div>
+            <div class="party-list" style="animation-delay: ${i*0.1}s">
+                <div class="party-header">
+                    <span>PARTY 0${i+1}</span>
+                    <span style="font-size:0.8rem; opacity:0.7">FULL PARTY</span>
+                </div>
+                ${createMemberRow('tank', t)}
+                ${createMemberRow('healer', h)}
+                ${createMemberRow('dps', d1)}
+                ${createMemberRow('dps', d2)}
             </div>`;
         }
 
-        // 處理候補 (剩下的)
-        if(tanks.length > 0 || healers.length > 0 || dps.length > 0) {
+        // 候補區
+        if(tanks.length || healers.length || dps.length) {
             htmlOutput += `
-            <div class="team-card" style="border-left-color: #555; animation: fadeIn 0.5s ease backwards; animation-delay: 0.3s">
-                <div class="team-title">【候補 / 未分配人員】</div>
-                ${tanks.length ? `<div class="team-member" style="color:var(--tank-color)">坦: ${tanks.join(", ")}</div>` : ""}
-                ${healers.length ? `<div class="team-member" style="color:var(--healer-color)">補: ${healers.join(", ")}</div>` : ""}
-                ${dps.length ? `<div class="team-member" style="color:var(--dps-color)">DPS: ${dps.join(", ")}</div>` : ""}
+            <div class="party-list" style="border-color:#555; animation-delay: 0.3s">
+                <div class="party-header" style="color:#aaa">
+                    <span>RESERVE / 待機成員</span>
+                </div>
+                ${tanks.map(n => createMemberRow('tank', n)).join('')}
+                ${healers.map(n => createMemberRow('healer', n)).join('')}
+                ${dps.map(n => createMemberRow('dps', n)).join('')}
             </div>`;
         }
 
         resultArea.innerHTML = htmlOutput;
+    }
+
+    function createMemberRow(role, name) {
+        const iconSvg = ICONS[role];
+        const displayClass = name ? 'member-name' : 'member-missing';
+        const displayName = name ? name : 'Matching... (缺員)';
+        
+        return `
+        <div class="party-member">
+            <div class="job-icon ${role}">${iconSvg}</div>
+            <div class="${displayClass}">${displayName}</div>
+        </div>`;
     }
 
     init();
