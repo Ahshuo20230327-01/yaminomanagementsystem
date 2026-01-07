@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬亞米諾旅團 | Gemini AI Core</title>
+    <title>FF14 百萬亞米諾旅團 | Team Allocator</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -17,7 +17,6 @@
             --tank-color: #669df6;
             --healer-color: #81c995;
             --dps-color: #f28b82;
-            --ai-accent: #c48df6;
         }
 
         body {
@@ -41,41 +40,18 @@
         h1 {
             font-size: 1.8rem;
             font-weight: 500;
-            margin: 0 0 10px 0;
+            margin: 0;
             letter-spacing: 1px;
             background: linear-gradient(90deg, #4285F4, #9B72CB, #D96570);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
-        /* AI 連線狀態標籤 */
-        .ai-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--ai-accent);
-            border: 1px solid rgba(196, 141, 246, 0.3);
-            box-shadow: 0 0 10px rgba(196, 141, 246, 0.1);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #44d7b6;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #44d7b6;
-            animation: blink 2s infinite;
-        }
-
-        @keyframes blink {
-            0% { opacity: 0.4; }
-            50% { opacity: 1; }
-            100% { opacity: 0.4; }
+        .subtitle {
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+            margin-top: 8px;
+            opacity: 0.8;
         }
 
         .container {
@@ -232,10 +208,7 @@
 
 <header>
     <h1>FF14 百萬亞米諾旅團</h1>
-    <div class="ai-badge">
-        <span class="status-dot"></span>
-        Gemini direct access to google AI
-    </div>
+    <p class="subtitle">Intelligent Team Allocation System</p>
 </header>
 
 <div class="container">
@@ -274,7 +247,6 @@
 </div>
 
 <script>
-    // [更新點] 加入新成員 窩福
     const PRESET_NAMES = [
         "色素", "r冷", "春捲", "希妮", "Evas", 
         "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", "窩福"
