@@ -238,7 +238,7 @@
             <div style="color: var(--secondary-text); margin-top: 40px; display:flex; gap:15px; align-items:flex-start;">
                 <span style="font-size: 1.5rem;">✨</span>
                 <div style="line-height: 1.5;">
-                    請在右側(或是下方)勾選出席人員<br>
+                    請在右側勾選出席人員<br>
                     並確認職能後按下按鈕
                 </div>
             </div>
@@ -247,7 +247,6 @@
 </div>
 
 <script>
-    // [更新點] 加入新成員 NANA
     const PRESET_NAMES = [
         "色素", "r冷", "春捲", "希妮", "Evas", 
         "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
@@ -317,15 +316,15 @@
             }
         }
 
-        const showError = (msg) => {
-            resultArea.innerHTML = `<div style="background:#3c1e1e; color:#f28b82; padding:15px; border-radius:12px; border:1px solid #f28b82;">⚠️ ${msg}</div>`;
-        };
-
         const total = tanks.length + healers.length + dps.length;
-        if(total === 0) return showError("請至少勾選一位出席者");
-        if(tanks.length < teamCount) return showError(`坦克不足：需要 ${teamCount} 位，目前 ${tanks.length} 位`);
-        if(healers.length < teamCount) return showError(`補師不足：需要 ${teamCount} 位，目前 ${healers.length} 位`);
+        if(total === 0) {
+            resultArea.innerHTML = `<div style="background:#3c1e1e; color:#f28b82; padding:15px; border-radius:12px; border:1px solid #f28b82;">⚠️ 請至少勾選一位出席者</div>`;
+            return;
+        }
 
+        // --- 垂直填滿邏輯 (Vertical Fill) ---
+        // 優先把第 1 隊塞滿，再去塞第 2 隊
+        
         const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
         shuffle(tanks);
         shuffle(healers);
@@ -334,9 +333,12 @@
         let htmlOutput = "";
 
         for(let i=0; i<teamCount; i++) {
-            const t = tanks[i];
-            const h = healers[i];
+            // 嘗試從各個池子裡抓人，抓不到就顯示缺員
+            const t = tanks.length > 0 ? tanks.shift() : "<span style='opacity:0.5'>(缺員)</span>";
+            const h = healers.length > 0 ? healers.shift() : "<span style='opacity:0.5'>(缺員)</span>";
+            
             let currentTeamDps = [];
+            // 每隊 2 個 DPS 位置
             for(let j=0; j<2; j++) {
                 currentTeamDps.push(dps.length > 0 ? dps.shift() : "<span style='opacity:0.5'>(缺員)</span>");
             }
@@ -350,15 +352,13 @@
             </div>`;
         }
 
-        const leftTanks = tanks.slice(teamCount);
-        const leftHealers = healers.slice(teamCount);
-        
-        if(dps.length > 0 || leftTanks.length > 0 || leftHealers.length > 0) {
+        // 處理候補 (剩下的)
+        if(tanks.length > 0 || healers.length > 0 || dps.length > 0) {
             htmlOutput += `
             <div class="team-card" style="border-left-color: #555; animation: fadeIn 0.5s ease backwards; animation-delay: 0.3s">
                 <div class="team-title">【候補 / 未分配人員】</div>
-                ${leftTanks.length ? `<div class="team-member" style="color:var(--tank-color)">坦: ${leftTanks.join(", ")}</div>` : ""}
-                ${leftHealers.length ? `<div class="team-member" style="color:var(--healer-color)">補: ${leftHealers.join(", ")}</div>` : ""}
+                ${tanks.length ? `<div class="team-member" style="color:var(--tank-color)">坦: ${tanks.join(", ")}</div>` : ""}
+                ${healers.length ? `<div class="team-member" style="color:var(--healer-color)">補: ${healers.join(", ")}</div>` : ""}
                 ${dps.length ? `<div class="team-member" style="color:var(--dps-color)">DPS: ${dps.join(", ")}</div>` : ""}
             </div>`;
         }
@@ -370,4 +370,3 @@
 </script>
 </body>
 </html>
-
