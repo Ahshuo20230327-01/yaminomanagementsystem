@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬亞米諾旅團 | Team Allocator</title>
+    <title>FF14 百萬亞米諾旅團 | 分組系統</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -213,33 +213,33 @@
 
 <div class="container">
     <div class="card" style="order: 2;">
-        <h2>📝 任務參數 (Parameters)</h2>
+        <h2>📝 出席名單與職能</h2>
         
         <div class="input-group">
-            <label>Squadron Count</label>
+            <label>預計隊伍數量</label>
             <input type="number" id="teamCount" value="2" min="1" max="4">
         </div>
 
         <div id="roster-list" class="roster-list"></div>
 
         <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
-            <label style="color: var(--secondary-text); font-size: 0.8rem; margin-bottom: 10px; display:block;">External Units</label>
+            <label style="color: var(--secondary-text); font-size: 0.8rem; margin-bottom: 10px; display:block;">--- 手動輸入區 (外找/野人) ---</label>
             <div id="manual-list" class="roster-list"></div>
         </div>
 
         <button class="generate-btn" onclick="generateTeams()">
-            ✧ 生成最佳化編制
+            開始隨機分組
         </button>
     </div>
 
     <div class="card" style="order: 1;">
-        <h2>📊 分析結果 (Response)</h2>
+        <h2>📊 分組結果</h2>
         <div id="result-area" class="result-box">
             <div style="color: var(--secondary-text); margin-top: 40px; display:flex; gap:15px; align-items:flex-start;">
                 <span style="font-size: 1.5rem;">✨</span>
                 <div style="line-height: 1.5;">
-                    你好，我是你的公會分配助手。<br>
-                    請在右側(或是下方)設定人員名單，我將為你計算最佳的分組配置。
+                    請在右側勾選出席人員<br>
+                    並確認職能後按下按鈕
                 </div>
             </div>
         </div>
@@ -247,9 +247,11 @@
 </div>
 
 <script>
+    // [更新點] 加入新成員 NANA
     const PRESET_NAMES = [
         "色素", "r冷", "春捲", "希妮", "Evas", 
-        "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", "窩福", "NANA"
+        "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
+        "窩福", "NANA"
     ];
 
     function init() {
@@ -341,10 +343,10 @@
 
             htmlOutput += `
             <div class="team-card" style="animation: fadeIn 0.5s ease backwards; animation-delay: ${i*0.1}s">
-                <div class="team-title">Team 0${i+1}</div>
-                <div class="team-member"><span style="color:var(--tank-color)">🛡️ ${t}</span></div>
-                <div class="team-member"><span style="color:var(--healer-color)">💚 ${h}</span></div>
-                <div class="team-member"><span style="color:var(--dps-color)">⚔️ ${currentTeamDps.join(" , ")}</span></div>
+                <div class="team-title">【第 ${i+1} 小隊】</div>
+                <div class="team-member"><span style="color:var(--tank-color)">🛡️ T : ${t}</span></div>
+                <div class="team-member"><span style="color:var(--healer-color)">💚 H : ${h}</span></div>
+                <div class="team-member"><span style="color:var(--dps-color)">⚔️ D : ${currentTeamDps.join(" , ")}</span></div>
             </div>`;
         }
 
@@ -354,10 +356,10 @@
         if(dps.length > 0 || leftTanks.length > 0 || leftHealers.length > 0) {
             htmlOutput += `
             <div class="team-card" style="border-left-color: #555; animation: fadeIn 0.5s ease backwards; animation-delay: 0.3s">
-                <div class="team-title">候 補 / 待 機</div>
-                ${leftTanks.length ? `<div class="team-member" style="color:var(--tank-color)">T: ${leftTanks.join(", ")}</div>` : ""}
-                ${leftHealers.length ? `<div class="team-member" style="color:var(--healer-color)">H: ${leftHealers.join(", ")}</div>` : ""}
-                ${dps.length ? `<div class="team-member" style="color:var(--dps-color)">D: ${dps.join(", ")}</div>` : ""}
+                <div class="team-title">【候補 / 未分配人員】</div>
+                ${leftTanks.length ? `<div class="team-member" style="color:var(--tank-color)">坦: ${leftTanks.join(", ")}</div>` : ""}
+                ${leftHealers.length ? `<div class="team-member" style="color:var(--healer-color)">補: ${leftHealers.join(", ")}</div>` : ""}
+                ${dps.length ? `<div class="team-member" style="color:var(--dps-color)">DPS: ${dps.join(", ")}</div>` : ""}
             </div>`;
         }
 
@@ -368,5 +370,3 @@
 </script>
 </body>
 </html>
-
-
