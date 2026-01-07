@@ -1,658 +1,299 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬亞米諾旅團 | Duty Finder</title>
-    <!-- 引入 FF14 風格字體 Cinzel (英文標題用) 與 Noto Sans TC -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            /* FF14 經典色票 */
-            --bg-dark: #121212;
-            --panel-bg: rgba(20, 20, 20, 0.95);
-            --border-gold: #c6a86b;
-            --border-dim: #4a4a4a;
-            --text-gold: #d4b57e;
-            --text-white: #e0e0e0;
-            --text-dim: #888;
+import tkinter as tk
+from tkinter import messagebox
+import random
+import ctypes
+
+# --- 現代化配色方案 (Dark/Flat) ---
+C_BG = "#121212"           # 背景極黑
+C_CARD_BG = "#1e1e1e"      # 卡片預設黑
+C_CARD_HOVER = "#2a2a2a"   # 卡片滑過
+C_CARD_ACTIVE = "#2d2d2d"  # 卡片選中背景
+C_GOLD = "#d4b57e"         # FF14 金色
+C_TEXT_MAIN = "#ececec"    # 主要文字
+C_TEXT_DIM = "#666666"     # 次要文字
+C_ACCENT = "#d4b57e"       # 強調色
+
+# 職能色票 (扁平化)
+C_TANK = "#3d5c8a"         # 暗藍
+C_TANK_HL = "#669df6"      # 亮藍 (選中)
+C_HEAL = "#3d7042"         # 暗綠
+C_HEAL_HL = "#81c995"      # 亮綠 (選中)
+C_DPS = "#8a3d3d"          # 暗紅
+C_DPS_HL = "#f28b82"       # 亮紅 (選中)
+
+# 固定名單
+PRESET_NAMES = [
+    "色素", "r冷", "春捲", "希妮", "Evas", 
+    "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
+    "窩福", "NANA"
+]
+
+class TeamMakerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("FF14 任務搜尋器 (Modern UI)")
+        self.root.configure(bg=C_BG)
+        
+        # 設定視窗大小與置中
+        # 高度維持 920 以確保不被遮擋
+        w, h = 1200, 920
+        ws, hs = root.winfo_screenwidth(), root.winfo_screenheight()
+        x, y = int(ws/2 - w/2), int(hs/2 - h/2)
+        self.root.geometry(f'{w}x{h}+{x}+{y}')
+
+        # 資料結構初始化
+        self.roster_data = []
+        for name in PRESET_NAMES:
+            self.roster_data.append({
+                "type": "preset",
+                "name": name,
+                "role": "D",
+                "selected": False,
+                "widgets": {} 
+            })
+        
+        # 加入 2 個手動欄位
+        for i in range(2):
+            self.roster_data.append({
+                "type": "manual",
+                "name": "",
+                "role": "D",
+                "selected": False,
+                "widgets": {}
+            })
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        # --- 標題區 ---
+        header = tk.Frame(self.root, bg=C_BG)
+        header.pack(fill="x", pady=(20, 10))
+        
+        # [修改] 標題中文化
+        tk.Label(header, text="任務搜尋器", font=("微軟正黑體", 28, "bold"), bg=C_BG, fg=C_GOLD).pack()
+        tk.Label(header, text="百萬亞米諾旅團 分組系統", font=("微軟正黑體", 12), bg=C_BG, fg=C_TEXT_DIM).pack()
+        
+        # 金色分隔線
+        tk.Frame(self.root, bg=C_GOLD, height=2).pack(fill="x", padx=40, pady=(0, 20))
+
+        # --- 雙欄佈局 ---
+        container = tk.Frame(self.root, bg=C_BG)
+        container.pack(fill="both", expand=True, padx=40, pady=10)
+
+        # 左欄：名單區
+        self.left_frame = tk.Frame(container, bg=C_BG)
+        self.left_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=(0, 20))
+
+        # 右欄：控制與結果
+        self.right_frame = tk.Frame(container, bg=C_BG)
+        self.right_frame.pack(side=tk.RIGHT, fill="both", expand=True)
+
+        # --- 繪製左欄內容 ---
+        # [修改] 標籤中文化
+        tk.Label(self.left_frame, text="冒險者名單", font=("微軟正黑體", 14, "bold"), bg=C_BG, fg=C_TEXT_DIM).pack(anchor="w", pady=(0, 10))
+        
+        # 生成每一列 (卡片)
+        for idx, data in enumerate(self.roster_data):
+            self.create_player_card(self.left_frame, idx, data)
             
-            /* 職能顏色 (霓虹光感) */
-            --tank-glow: rgba(74, 144, 226, 0.6);
-            --tank-solid: #4a90e2;
-            --healer-glow: rgba(126, 211, 33, 0.6);
-            --healer-solid: #7ed321;
-            --dps-glow: rgba(208, 2, 27, 0.6);
-            --dps-solid: #d0021b;
-        }
+            # 在固定名單和手動名單中間加個分隔
+            if idx == len(PRESET_NAMES) - 1:
+                tk.Frame(self.left_frame, bg="#333", height=1).pack(fill="x", pady=15)
+                # [修改] 標籤中文化
+                tk.Label(self.left_frame, text="外找支援", font=("微軟正黑體", 12, "bold"), bg=C_BG, fg=C_TEXT_DIM).pack(anchor="w", pady=(0, 5))
 
-        * { box-sizing: border-box; user-select: none; }
-
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: var(--bg-dark);
-            /* 背景材質感 */
-            background-image: radial-gradient(circle at center, #2a2a2a 0%, #000 100%);
-            color: var(--text-white);
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        /* --- 頭部設計 --- */
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-            margin-top: 20px;
-            position: relative;
-            width: 100%;
-            max-width: 1000px;
-            border-bottom: 1px solid rgba(198, 168, 107, 0.3);
-            padding-bottom: 20px;
-        }
-
-        header::after {
-            /* 金色光暈裝飾線 */
-            content: "";
-            position: absolute;
-            bottom: -1px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 50%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--border-gold), transparent);
-            box-shadow: 0 0 10px var(--border-gold);
-        }
-
-        h1 {
-            font-family: 'Cinzel', serif;
-            font-size: 2.5rem;
-            color: var(--text-gold);
-            margin: 0;
-            letter-spacing: 4px;
-            text-shadow: 0 0 15px rgba(198, 168, 107, 0.4);
-            text-transform: uppercase;
-        }
-
-        .subtitle {
-            font-family: 'Noto Sans TC', sans-serif;
-            color: var(--text-dim);
-            font-size: 0.9rem;
-            margin-top: 8px;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        /* --- 主容器 --- */
-        .container {
-            display: grid;
-            grid-template-columns: 380px 1fr; /* 左選單固定，右結果自適應 */
-            gap: 25px;
-            max-width: 1200px;
-            width: 100%;
-            animation: fadeIn 0.8s ease-out;
-        }
-
-        /* --- 面板通用樣式 (FF14 UI 風格) --- */
-        .panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-dim);
-            border-radius: 6px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
-            backdrop-filter: blur(5px);
-            transition: border-color 0.3s;
-        }
-
-        .panel:hover {
-            border-color: rgba(198, 168, 107, 0.4);
-        }
-
-        /* 面板角落金色裝飾 */
-        .panel::before, .panel::after {
-            content: "";
-            position: absolute;
-            width: 8px; height: 8px;
-            transition: all 0.3s;
-        }
-        .panel::before { top: -1px; left: -1px; border-top: 2px solid var(--border-gold); border-left: 2px solid var(--border-gold); }
-        .panel::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--border-gold); border-right: 2px solid var(--border-gold); }
-
-        .panel-header {
-            font-family: 'Cinzel', serif;
-            color: var(--text-gold);
-            font-size: 1rem;
-            margin-bottom: 20px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .panel-hint {
-            font-family: 'Noto Sans TC', sans-serif;
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            letter-spacing: 0;
-            text-transform: none;
-        }
-
-        /* --- 名單卡片 (Roster Item) --- */
-        .roster-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-height: 600px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-
-        /* 自訂捲軸 */
-        .roster-grid::-webkit-scrollbar { width: 4px; }
-        .roster-grid::-webkit-scrollbar-track { background: #111; }
-        .roster-grid::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
-        .roster-grid::-webkit-scrollbar-thumb:hover { background: var(--text-gold); }
-
-        .roster-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: linear-gradient(90deg, rgba(255,255,255,0.03), transparent);
-            padding: 10px 15px;
-            border-radius: 4px;
-            border-left: 3px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .roster-card:hover {
-            background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
-        }
-
-        /* 選中狀態 */
-        .roster-card.active {
-            background: linear-gradient(90deg, rgba(198, 168, 107, 0.15), transparent);
-            border-left-color: var(--text-gold);
-        }
-        .roster-card.active .roster-name {
-            color: var(--text-gold);
-            text-shadow: 0 0 8px rgba(198, 168, 107, 0.5);
-        }
-
-        .roster-name {
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--text-dim);
-            transition: color 0.2s;
-        }
-
-        /* 職能切換器 */
-        .role-switch {
-            display: flex;
-            gap: 8px;
-        }
-
-        .role-icon {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #555;
-            background: #222;
-            border: 1px solid #444;
-            transition: all 0.2s;
-        }
-
-        .role-icon:hover { transform: scale(1.1); }
-
-        /* 職能激活狀態 */
-        .role-icon.t-active {
-            background: rgba(74, 144, 226, 0.2);
-            border-color: var(--tank-solid);
-            color: var(--tank-solid);
-            box-shadow: 0 0 8px var(--tank-glow);
-        }
-        .role-icon.h-active {
-            background: rgba(126, 211, 33, 0.2);
-            border-color: var(--healer-solid);
-            color: var(--healer-solid);
-            box-shadow: 0 0 8px var(--healer-glow);
-        }
-        .role-icon.d-active {
-            background: rgba(208, 2, 27, 0.2);
-            border-color: var(--dps-solid);
-            color: var(--dps-solid);
-            box-shadow: 0 0 8px var(--dps-glow);
-        }
-
-        /* 手動輸入框 */
-        .manual-input {
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid #444;
-            color: var(--text-white);
-            font-family: inherit;
-            padding: 4px;
-            width: 120px;
-            transition: border 0.3s;
-        }
-        .manual-input:focus {
-            outline: none;
-            border-bottom-color: var(--text-gold);
-        }
-
-        /* --- 控制列 --- */
-        .control-bar {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 20px;
-            background: rgba(0,0,0,0.3);
-            padding: 15px;
-            border-radius: 4px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .team-input-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .team-count-input {
-            background: #111;
-            border: 1px solid #555;
-            color: var(--text-gold);
-            padding: 8px;
-            width: 60px;
-            text-align: center;
-            font-size: 1.2rem;
-            font-family: 'Cinzel', serif;
-            border-radius: 4px;
-        }
-
-        /* --- DUTY FINDER 按鈕 (核心) --- */
-        .duty-btn {
-            flex: 1;
-            position: relative;
-            background: linear-gradient(180deg, #5c4d38 0%, #3d3122 100%);
-            border: 1px solid var(--text-gold);
-            color: #fff;
-            font-family: 'Cinzel', serif;
-            font-size: 1.2rem;
-            padding: 12px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            transition: all 0.2s;
-            overflow: hidden;
-            border-radius: 2px;
-        }
-
-        .duty-btn:hover {
-            background: linear-gradient(180deg, #7c684b 0%, #4d3e2b 100%);
-            text-shadow: 0 0 10px #fff;
-            box-shadow: 0 0 15px var(--border-gold);
-        }
-
-        .duty-btn:active {
-            transform: scale(0.98);
-        }
-
-        /* 掃光特效 */
-        .duty-btn::after {
-            content: "";
-            position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
-        }
-        .duty-btn:hover::after {
-            left: 100%;
-        }
-
-        /* --- 結果區 --- */
-        .result-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .party-list {
-            background: rgba(0,0,0,0.4);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            animation: fadeIn 0.5s ease backwards;
-        }
-
-        .party-header {
-            background: rgba(198, 168, 107, 0.1);
-            color: var(--text-gold);
-            font-family: 'Cinzel', serif;
-            padding: 10px 15px;
-            font-size: 1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .party-member {
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .party-member:last-child { border-bottom: none; }
-
-        /* 職能圖示 (SVG) */
-        .job-icon {
-            width: 24px; height: 24px;
-        }
-        .job-icon.tank svg { fill: var(--tank-solid); filter: drop-shadow(0 0 5px var(--tank-glow)); }
-        .job-icon.healer svg { fill: var(--healer-solid); filter: drop-shadow(0 0 5px var(--healer-glow)); }
-        .job-icon.dps svg { fill: var(--dps-solid); filter: drop-shadow(0 0 5px var(--dps-glow)); }
+        # --- 繪製右欄內容 ---
+        # 控制區塊
+        ctrl_box = tk.Frame(self.right_frame, bg=C_CARD_BG, padx=20, pady=20)
+        ctrl_box.pack(fill="x", pady=(0, 20))
         
-        .member-name { font-size: 1.1rem; }
-        .member-missing { color: #555; font-style: italic; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* RWD */
-        @media (max-width: 850px) {
-            .container { grid-template-columns: 1fr; }
-            .control-bar { flex-direction: column; align-items: stretch; }
-            .duty-btn { width: 100%; }
-        }
-    </style>
-</head>
-<body>
-
-<header>
-    <h1>Duty Finder</h1>
-    <div class="subtitle">百萬亞米諾旅團 分組系統</div>
-</header>
-
-<div class="container">
-    <!-- 左側：冒險者名單 -->
-    <div class="panel">
-        <div class="panel-header">
-            ADVENTURER POOL
-            <span class="panel-hint">請點擊選擇 / 切換職能</span>
-        </div>
-
-        <div id="roster-grid" class="roster-grid">
-            <!-- JS 自動生成 -->
-        </div>
-
-        <div style="margin-top:20px; padding-top:15px; border-top:1px solid #333;">
-            <div class="panel-header" style="font-size:0.9rem; border:none; margin-bottom:10px;">
-                EXTERNAL UNITS (外找支援)
-            </div>
-            <div id="manual-grid" class="roster-grid">
-                <!-- JS 自動生成手動區 -->
-            </div>
-        </div>
-    </div>
-
-    <!-- 右側：控制與結果 -->
-    <div>
-        <div class="control-bar">
-            <div class="team-input-group">
-                <label style="color:var(--text-gold); font-family:'Cinzel', serif;">PARTIES</label>
-                <input type="number" id="teamCount" class="team-count-input" value="2" min="1" max="4">
-            </div>
-            <button class="duty-btn" onclick="generateTeams()">
-                Commence Duty
-            </button>
-        </div>
-        <div style="text-align:right; color:#666; font-size:0.8rem; margin-top:-15px; margin-bottom:15px; padding-right:5px;">
-            * 系統將優先填滿第 1 小隊
-        </div>
-
-        <div id="result-area" class="result-container">
-            <div style="grid-column: 1 / -1; text-align: center; color: #444; padding: 60px; border: 2px dashed #333; border-radius:10px;">
-                <div style="font-size:2rem; margin-bottom:10px; opacity:0.3;">⚔️</div>
-                Awaiting Orders...<br>請設定成員後點擊 Commence Duty
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    // 內建 SVG 圖示路徑 (為了單一檔案不依賴外部連結)
-    const ICONS = {
-        tank: '<svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>',
-        healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
-        dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>'
-    };
-
-    // V2.8 完整名單
-    const PRESET_NAMES = [
-        "色素", "r冷", "春捲", "希妮", "Evas", 
-        "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
-        "窩福", "NANA"
-    ];
-
-    // 狀態管理
-    // role: 'D' (預設 DPS)
-    // selected: false (預設不選)
-    let rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D' }));
-    
-    // 手動區狀態
-    let manualState = [
-        { id: 'm1', name: '', selected: false, role: 'D' },
-        { id: 'm2', name: '', selected: false, role: 'D' }
-    ];
-
-    function init() {
-        renderRoster();
-        renderManual();
-    }
-
-    // 渲染固定名單
-    function renderRoster() {
-        const grid = document.getElementById('roster-grid');
-        grid.innerHTML = '';
+        # [修改] 標籤中文化
+        tk.Label(ctrl_box, text="隊伍數量", font=("微軟正黑體", 12, "bold"), bg=C_CARD_BG, fg=C_GOLD).pack(anchor="w")
         
-        rosterState.forEach((member, index) => {
-            const card = document.createElement('div');
-            card.className = `roster-card ${member.selected ? 'active' : ''}`;
-            
-            // 點擊卡片本身切換選取狀態
-            card.onclick = (e) => {
-                // 如果點到的是職能按鈕，不要觸發卡片選取
-                if(e.target.closest('.role-icon')) return;
-                toggleSelect(index);
-            };
-
-            card.innerHTML = `
-                <div class="roster-name">${member.name}</div>
-                <div class="role-switch">
-                    ${createRoleBtn(index, 'T', member.role)}
-                    ${createRoleBtn(index, 'H', member.role)}
-                    ${createRoleBtn(index, 'D', member.role)}
-                </div>
-            `;
-            grid.appendChild(card);
-        });
-    }
-
-    // 渲染手動區
-    function renderManual() {
-        const grid = document.getElementById('manual-grid');
-        grid.innerHTML = '';
-
-        manualState.forEach((m, index) => {
-            const card = document.createElement('div');
-            card.className = `roster-card ${m.selected ? 'active' : ''}`;
-            card.style.cursor = 'default';
-
-            card.innerHTML = `
-                <input type="text" class="manual-input" placeholder="輸入 ID..." value="${m.name}" oninput="updateManualName(${index}, this.value)">
-                <div class="role-switch">
-                    ${createManualRoleBtn(index, 'T', m.role)}
-                    ${createManualRoleBtn(index, 'H', m.role)}
-                    ${createManualRoleBtn(index, 'D', m.role)}
-                </div>
-            `;
-            grid.appendChild(card);
-        });
-    }
-
-    // 產生職能按鈕 HTML
-    function createRoleBtn(index, type, currentRole) {
-        const activeClass = (currentRole === type) ? `${type.toLowerCase()}-active` : '';
-        return `<div class="role-icon ${activeClass}" onclick="setRole(${index}, '${type}')">${type}</div>`;
-    }
-
-    function createManualRoleBtn(index, type, currentRole) {
-        const activeClass = (currentRole === type) ? `${type.toLowerCase()}-active` : '';
-        return `<div class="role-icon ${activeClass}" onclick="setManualRole(${index}, '${type}')">${type}</div>`;
-    }
-
-    // --- 互動邏輯 ---
-
-    function toggleSelect(index) {
-        rosterState[index].selected = !rosterState[index].selected;
-        renderRoster();
-    }
-
-    function setRole(index, role) {
-        rosterState[index].role = role;
-        rosterState[index].selected = true; // 點職能自動勾選
-        renderRoster();
-    }
-
-    function updateManualName(index, val) {
-        manualState[index].name = val;
-        if(val && !manualState[index].selected) {
-            manualState[index].selected = true;
-        } else if (!val) {
-            manualState[index].selected = false;
-        }
-        renderManual(); // 重新渲染以更新樣式
-        // 注意：重新渲染會導致 input 失去焦點，這裡為了簡單省略 focus 處理，
-        // 實際體驗中，因為只更新 class，input 的 value 屬性在 HTML 字串中被更新
-        // 更好的做法是只操作 DOM class，但為了代碼簡潔，這裡做全渲染
-        // *修正*：為了避免打字中斷，我們手動把焦點抓回來
-        setTimeout(() => {
-            const inputs = document.querySelectorAll('.manual-input');
-            if(inputs[index]) {
-                inputs[index].focus(); 
-                inputs[index].setSelectionRange(100, 100); // 光標移到最後
-            }
-        }, 0);
-    }
-
-    function setManualRole(index, role) {
-        manualState[index].role = role;
-        if(manualState[index].name) manualState[index].selected = true;
-        renderManual();
-    }
-
-    // --- 核心分組邏輯 (V2.8/3.0 優先滿團版) ---
-
-    function generateTeams() {
-        const teamCount = parseInt(document.getElementById('teamCount').value);
-        const resultArea = document.getElementById('result-area');
+        input_row = tk.Frame(ctrl_box, bg=C_CARD_BG)
+        input_row.pack(fill="x", pady=10)
         
-        let tanks = [], healers = [], dps = [];
-
-        // 收集固定名單
-        rosterState.forEach(m => {
-            if(m.selected) {
-                if(m.role === 'T') tanks.push(m.name);
-                else if(m.role === 'H') healers.push(m.name);
-                else dps.push(m.name);
-            }
-        });
-
-        // 收集手動名單
-        manualState.forEach(m => {
-            if(m.selected && m.name.trim()) {
-                const name = m.name + "(手)";
-                if(m.role === 'T') tanks.push(name);
-                else if(m.role === 'H') healers.push(name);
-                else dps.push(name);
-            }
-        });
-
-        if(tanks.length + healers.length + dps.length === 0) {
-            alert("⚠️ 請至少選擇一名成員");
-            return;
-        }
-
-        // 洗牌
-        const shuffle = arr => arr.sort(() => Math.random() - 0.5);
-        shuffle(tanks); shuffle(healers); shuffle(dps);
-
-        let htmlOutput = "";
-
-        // 垂直填滿 (Priority Fill)
-        for(let i=0; i<teamCount; i++) {
-            const t = tanks.length ? tanks.shift() : null;
-            const h = healers.length ? healers.shift() : null;
-            const d1 = dps.length ? dps.shift() : null;
-            const d2 = dps.length ? dps.shift() : null;
-
-            htmlOutput += `
-            <div class="party-list" style="animation-delay: ${i*0.1}s">
-                <div class="party-header">
-                    <span>PARTY 0${i+1}</span>
-                    <span style="font-size:0.8rem; opacity:0.7">FULL PARTY</span>
-                </div>
-                ${createMemberRow('tank', t)}
-                ${createMemberRow('healer', h)}
-                ${createMemberRow('dps', d1)}
-                ${createMemberRow('dps', d2)}
-            </div>`;
-        }
-
-        // 候補區
-        if(tanks.length || healers.length || dps.length) {
-            htmlOutput += `
-            <div class="party-list" style="border-color:#555; animation-delay: 0.3s">
-                <div class="party-header" style="color:#aaa">
-                    <span>RESERVE / 待機成員</span>
-                </div>
-                ${tanks.map(n => createMemberRow('tank', n)).join('')}
-                ${healers.map(n => createMemberRow('healer', n)).join('')}
-                ${dps.map(n => createMemberRow('dps', n)).join('')}
-            </div>`;
-        }
-
-        resultArea.innerHTML = htmlOutput;
-    }
-
-    function createMemberRow(role, name) {
-        const iconSvg = ICONS[role];
-        const displayClass = name ? 'member-name' : 'member-missing';
-        const displayName = name ? name : 'Matching... (缺員)';
+        self.entry_team_count = tk.Entry(input_row, width=5, font=("Arial", 18), bg="#111", fg=C_GOLD, relief="flat", insertbackground=C_GOLD, justify="center")
+        self.entry_team_count.insert(0, "2")
+        self.entry_team_count.pack(side=tk.LEFT)
         
-        return `
-        <div class="party-member">
-            <div class="job-icon ${role}">${iconSvg}</div>
-            <div class="${displayClass}">${displayName}</div>
-        </div>`;
-    }
+        # [修改] 按鈕中文化
+        btn_run = tk.Button(input_row, text="開始任務分配", command=self.generate_teams,
+                            bg=C_GOLD, fg="#000", font=("微軟正黑體", 14, "bold"), relief="flat", padx=20, pady=5, cursor="hand2")
+        btn_run.pack(side=tk.RIGHT)
+        
+        # 結果顯示區
+        # [修改] 字體從 13 加大到 16，改用微軟正黑體以配合中文
+        self.text_result = tk.Text(self.right_frame, bg="#0a0a0a", fg=C_TEXT_MAIN, font=("微軟正黑體", 16), relief="flat", padx=15, pady=15)
+        self.text_result.pack(fill="both", expand=True)
+        
+        # 設定文字顏色標籤
+        self.text_result.tag_config("tank", foreground=C_TANK_HL)
+        self.text_result.tag_config("healer", foreground=C_HEAL_HL)
+        self.text_result.tag_config("dps", foreground=C_DPS_HL)
+        self.text_result.tag_config("gold", foreground=C_GOLD, font=("微軟正黑體", 16, "bold"))
+        self.text_result.tag_config("dim", foreground=C_TEXT_DIM)
 
-    init();
-</script>
-</body>
-</html>
+    def create_player_card(self, parent, idx, data):
+        # 卡片容器
+        card = tk.Frame(parent, bg=C_CARD_BG, padx=10, pady=8)
+        card.pack(fill="x", pady=2)
+        
+        # 保存 widget 引用
+        data['widgets']['card'] = card
+
+        # 左側：名字 (點擊切換選取)
+        if data['type'] == 'preset':
+            name_lbl = tk.Label(card, text=data['name'], font=("微軟正黑體", 12), bg=C_CARD_BG, fg=C_TEXT_DIM, width=15, anchor="w", cursor="hand2")
+            name_lbl.pack(side=tk.LEFT, padx=5)
+            name_lbl.bind("<Button-1>", lambda e, i=idx: self.toggle_select(i))
+            data['widgets']['name_lbl'] = name_lbl
+        else:
+            # 手動輸入框
+            name_entry = tk.Entry(card, font=("微軟正黑體", 11), bg="#333", fg=C_TEXT_MAIN, relief="flat", width=15, insertbackground=C_TEXT_MAIN)
+            name_entry.pack(side=tk.LEFT, padx=5, ipady=3)
+            name_entry.bind("<KeyRelease>", lambda e, i=idx: self.on_manual_input(i, name_entry.get()))
+            data['widgets']['name_entry'] = name_entry
+
+        # 右側：職能選擇器 (T/H/D)
+        role_frame = tk.Frame(card, bg=C_CARD_BG)
+        role_frame.pack(side=tk.RIGHT)
+        
+        # 建立三個職能按鈕
+        for r_code in ["T", "H", "D"]:
+            # 使用 Label 模擬按鈕，避免原生 Radiobutton 樣式
+            lbl = tk.Label(role_frame, text=r_code, font=("Arial", 10, "bold"), 
+                           bg=C_CARD_BG, fg=C_TEXT_DIM, width=4, pady=2, cursor="hand2")
+            lbl.pack(side=tk.LEFT, padx=2)
+            # 使用閉包綁定參數
+            lbl.bind("<Button-1>", lambda e, i=idx, r=r_code: self.set_role(i, r))
+            data['widgets'][f'btn_{r_code}'] = lbl
+
+        # 綁定 Hover 效果
+        card.bind("<Enter>", lambda e: self.on_hover(card, True))
+        card.bind("<Leave>", lambda e: self.on_hover(card, False))
+        
+        self.update_row_visual(idx)
+
+    # --- 互動邏輯 ---
+
+    def on_hover(self, widget, is_hover):
+        pass 
+
+    def toggle_select(self, idx):
+        self.roster_data[idx]['selected'] = not self.roster_data[idx]['selected']
+        self.update_row_visual(idx)
+
+    def set_role(self, idx, role):
+        self.roster_data[idx]['role'] = role
+        # 手動輸入且名字為空時，不自動選取
+        if self.roster_data[idx]['type'] == 'manual' and not self.roster_data[idx]['name']:
+            pass
+        else:
+            self.roster_data[idx]['selected'] = True
+        self.update_row_visual(idx)
+
+    def on_manual_input(self, idx, value):
+        self.roster_data[idx]['name'] = value.strip()
+        if value.strip():
+            self.roster_data[idx]['selected'] = True
+        else:
+            self.roster_data[idx]['selected'] = False
+        self.update_row_visual(idx)
+
+    def update_row_visual(self, idx):
+        data = self.roster_data[idx]
+        ws = data['widgets']
+        
+        # 1. 更新卡片背景
+        if data['selected']:
+            ws['card'].config(bg=C_CARD_ACTIVE)
+            if 'name_lbl' in ws: ws['name_lbl'].config(bg=C_CARD_ACTIVE, fg=C_GOLD, font=("微軟正黑體", 12, "bold"))
+        else:
+            ws['card'].config(bg=C_CARD_BG)
+            if 'name_lbl' in ws: ws['name_lbl'].config(bg=C_CARD_BG, fg=C_TEXT_DIM, font=("微軟正黑體", 12))
+
+        # 2. 更新職能按鈕
+        # 重置背景
+        for r in ["T", "H", "D"]:
+            bg_color = C_CARD_BG if not data['selected'] else C_CARD_ACTIVE
+            ws[f'btn_{r}'].config(bg=bg_color, fg=C_TEXT_DIM, relief="flat")
+        
+        # 高亮當前職能
+        curr = data['role']
+        if data['selected']:
+            if curr == 'T': ws['btn_T'].config(bg=C_TANK, fg="white")
+            if curr == 'H': ws['btn_H'].config(bg=C_HEAL, fg="white")
+            if curr == 'D': ws['btn_D'].config(bg=C_DPS, fg="white")
+        else:
+            # 未選取時顯示微弱顏色
+            if curr == 'T': ws['btn_T'].config(fg=C_TANK)
+            if curr == 'H': ws['btn_H'].config(fg=C_HEAL)
+            if curr == 'D': ws['btn_D'].config(fg=C_DPS)
+
+    # --- 核心邏輯 ---
+    def append_colored_text(self, text, tag="dim"):
+        self.text_result.insert(tk.END, text, tag)
+
+    def generate_teams(self):
+        try:
+            num_teams = int(self.entry_team_count.get())
+        except ValueError:
+            messagebox.showerror("錯誤", "請輸入數字")
+            return
+
+        tanks, healers, dps = [], [], []
+
+        for data in self.roster_data:
+            if data['selected'] and data['name']:
+                # 處理手動輸入名字
+                final_name = data['name']
+                if data['type'] == 'manual':
+                    final_name += "(手)"
+                
+                if data['role'] == 'T': tanks.append(final_name)
+                elif data['role'] == 'H': healers.append(final_name)
+                else: dps.append(final_name)
+
+        if not (tanks or healers or dps):
+            messagebox.showwarning("提示", "請至少選擇一名成員")
+            return
+
+        random.shuffle(tanks)
+        random.shuffle(healers)
+        random.shuffle(dps)
+
+        self.text_result.config(state=tk.NORMAL)
+        self.text_result.delete("1.0", tk.END)
+
+        for i in range(num_teams):
+            t = tanks.pop(0) if tanks else "(缺員)"
+            h = healers.pop(0) if healers else "(缺員)"
+            d1 = dps.pop(0) if dps else "(缺員)"
+            d2 = dps.pop(0) if dps else "(缺員)"
+
+            # [修改] 輸出文字中文化
+            self.append_colored_text(f"第 {i+1} 小隊\n", "gold")
+            self.append_colored_text(f"🛡️ {t}\n", "tank" if t != "(缺員)" else "dim")
+            self.append_colored_text(f"💚 {h}\n", "healer" if h != "(缺員)" else "dim")
+            self.append_colored_text(f"⚔️ {d1}, {d2}\n", "dps" if d1 != "(缺員)" else "dim")
+            self.append_colored_text("\n")
+
+        if tanks or healers or dps:
+            self.append_colored_text("-" * 30 + "\n", "dim")
+            # [修改] 輸出文字中文化
+            self.append_colored_text("候補名單\n", "gold")
+            if tanks: self.append_colored_text(f"坦: {', '.join(tanks)}\n", "tank")
+            if healers: self.append_colored_text(f"補: {', '.join(healers)}\n", "healer")
+            if dps: self.append_colored_text(f"DPS: {', '.join(dps)}\n", "dps")
+
+        self.text_result.config(state=tk.DISABLED)
+
+if __name__ == "__main__":
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except:
+        pass
+    root = tk.Tk()
+    app = TeamMakerApp(root)
+    root.mainloop()
