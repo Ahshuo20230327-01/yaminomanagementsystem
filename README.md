@@ -1,0 +1,2 @@
+# yaminomanagementsystem
+FF14百萬亞米諾旅團工會懶人組隊分組器
