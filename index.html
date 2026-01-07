@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬亞米諾旅團 | 任務搜尋器</title>
-    <!-- 引入 Noto Sans TC (中文) 與 Cinzel (裝飾用英文) -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>FF14 百萬工會懶人組隊分組器</title>
+    <!-- 引入 Noto Sans TC (中文) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             /* FF14 經典色票 */
@@ -67,9 +67,9 @@
         }
 
         h1 {
-            font-family: 'Noto Sans TC', sans-serif; /* 改用中文字體 */
+            font-family: 'Noto Sans TC', sans-serif;
             font-weight: 700;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             color: var(--text-gold);
             margin: 0;
             letter-spacing: 2px;
@@ -120,10 +120,10 @@
         .panel::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--border-gold); border-right: 2px solid var(--border-gold); }
 
         .panel-header {
-            font-family: 'Noto Sans TC', sans-serif; /* 改用中文字體 */
+            font-family: 'Noto Sans TC', sans-serif;
             font-weight: 700;
             color: var(--text-gold);
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             margin-bottom: 20px;
             padding-bottom: 8px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -133,7 +133,7 @@
         }
 
         .panel-hint {
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             color: var(--text-dim);
             font-weight: 400;
         }
@@ -179,7 +179,7 @@
         }
 
         .roster-name {
-            font-size: 1.1rem; /* 稍微加大 */
+            font-size: 1.1rem;
             font-weight: 500;
             color: var(--text-dim);
             transition: color 0.2s;
@@ -192,7 +192,7 @@
         }
 
         .role-icon {
-            width: 28px; /* 加大觸控區 */
+            width: 28px;
             height: 28px;
             border-radius: 4px;
             display: flex;
@@ -204,6 +204,12 @@
             background: #222;
             border: 1px solid #444;
             transition: all 0.2s;
+        }
+
+        .role-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
         }
 
         .role-icon:hover { transform: scale(1.1); }
@@ -268,9 +274,9 @@
             background: linear-gradient(180deg, #5c4d38 0%, #3d3122 100%);
             border: 1px solid var(--text-gold);
             color: #fff;
-            font-family: 'Noto Sans TC', sans-serif; /* 改用中文字體 */
+            font-family: 'Noto Sans TC', sans-serif;
             font-weight: 700;
-            font-size: 1.4rem; /* 加大字體 */
+            font-size: 1.4rem;
             padding: 12px;
             cursor: pointer;
             letter-spacing: 2px;
@@ -318,7 +324,7 @@
             color: var(--text-gold);
             font-family: 'Noto Sans TC', sans-serif;
             padding: 12px 20px;
-            font-size: 1.3rem; /* 加大標題 */
+            font-size: 1.3rem;
             font-weight: 700;
             border-bottom: 1px solid rgba(255,255,255,0.05);
             display: flex;
@@ -327,7 +333,7 @@
         }
 
         .party-member {
-            padding: 15px 20px; /* 加大間距 */
+            padding: 15px 20px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
             display: flex;
             align-items: center;
@@ -336,12 +342,12 @@
         .party-member:last-child { border-bottom: none; }
 
         /* 職能圖示 */
-        .job-icon { width: 30px; height: 30px; } /* 加大圖示 */
+        .job-icon { width: 30px; height: 30px; }
         .job-icon.tank svg { fill: var(--tank-solid); filter: drop-shadow(0 0 5px var(--tank-glow)); }
         .job-icon.healer svg { fill: var(--healer-solid); filter: drop-shadow(0 0 5px var(--healer-glow)); }
         .job-icon.dps svg { fill: var(--dps-solid); filter: drop-shadow(0 0 5px var(--dps-glow)); }
         
-        .member-name { font-size: 1.3rem; font-weight: 500; } /* 加大成員名字 */
+        .member-name { font-size: 1.3rem; font-weight: 500; }
         .member-missing { color: #555; font-style: italic; font-size: 1.2rem; }
 
         @keyframes fadeIn {
@@ -360,15 +366,15 @@
 <body>
 
 <header>
-    <h1>任務搜尋器</h1>
-    <div class="subtitle">百萬亞米諾旅團 分組系統</div>
+    <h1>FF14 百萬工會懶人組隊分組器</h1>
+    <div class="subtitle">百萬亞米諾旅團</div>
 </header>
 
 <div class="container">
     <!-- 左側：冒險者名單 -->
     <div class="panel">
         <div class="panel-header">
-            冒險者名單
+            出席名單
             <span class="panel-hint">點擊選擇 / 切換職能</span>
         </div>
 
@@ -390,11 +396,11 @@
     <div>
         <div class="control-bar">
             <div class="team-input-group">
-                <label style="color:var(--text-gold); font-family:'Noto Sans TC', sans-serif; font-size: 1.2rem; font-weight: 700;">隊伍數量</label>
+                <label style="color:var(--text-gold); font-family:'Noto Sans TC', sans-serif; font-size: 1.2rem; font-weight: 700;">預計隊伍數量</label>
                 <input type="number" id="teamCount" class="team-count-input" value="2" min="1" max="4">
             </div>
             <button class="duty-btn" onclick="generateTeams()">
-                開始任務分配
+                開始隨機分組
             </button>
         </div>
         <div style="text-align:right; color:#666; font-size:0.9rem; margin-top:-15px; margin-bottom:15px; padding-right:5px;">
@@ -404,7 +410,7 @@
         <div id="result-area" class="result-container">
             <div style="grid-column: 1 / -1; text-align: center; color: #444; padding: 60px; border: 2px dashed #333; border-radius:10px;">
                 <div style="font-size:2rem; margin-bottom:10px; opacity:0.3;">⚔️</div>
-                等待指令中...<br>請設定成員後點擊「開始任務分配」
+                等待指令中...<br>請設定成員後點擊「開始隨機分組」
             </div>
         </div>
     </div>
@@ -490,12 +496,21 @@
     // 產生職能按鈕 HTML
     function createRoleBtn(index, type, currentRole) {
         const activeClass = (currentRole === type) ? `${type.toLowerCase()}-active` : '';
-        return `<div class="role-icon ${activeClass}" onclick="setRole(${index}, '${type}')">${type}</div>`;
+        const iconSvg = getIconSvg(type);
+        return `<div class="role-icon ${activeClass}" onclick="setRole(${index}, '${type}')">${iconSvg}</div>`;
     }
 
     function createManualRoleBtn(index, type, currentRole) {
         const activeClass = (currentRole === type) ? `${type.toLowerCase()}-active` : '';
-        return `<div class="role-icon ${activeClass}" onclick="setManualRole(${index}, '${type}')">${type}</div>`;
+        const iconSvg = getIconSvg(type);
+        return `<div class="role-icon ${activeClass}" onclick="setManualRole(${index}, '${type}')">${iconSvg}</div>`;
+    }
+
+    function getIconSvg(type) {
+        if (type === 'T') return ICONS.tank;
+        if (type === 'H') return ICONS.healer;
+        if (type === 'D') return ICONS.dps;
+        return type;
     }
 
     // --- 互動邏輯 ---
