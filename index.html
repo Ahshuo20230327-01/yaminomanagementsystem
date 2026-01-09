@@ -18,7 +18,7 @@
             --healer-solid: #7ed321;
             --dps-solid: #d0021b;
             --success-green: #4caf50;
-            --error-red: #f44336;
+            --error-red: #ff5252; /* 鮮豔紅，用於警示 */
         }
 
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -72,7 +72,7 @@
             flex-shrink: 0;
         }
 
-        /* --- Dashboard & Add --- */
+        /* --- Dashboard (Updated Colors) --- */
         .dashboard {
             display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px;
             background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
@@ -80,12 +80,12 @@
         .stat-item {
             display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.9rem; font-weight: 500;
         }
-        .stat-val { font-family: 'Noto Sans TC', sans-serif; font-weight: 700; }
+        .stat-val { font-family: 'Noto Sans TC', sans-serif; font-weight: 700; transition: color 0.3s; }
         .stat-limit { color: #666; font-size: 0.85rem; }
-        .stat-tank { color: var(--tank-solid); }
-        .stat-healer { color: var(--healer-solid); }
-        .stat-dps { color: var(--dps-solid); }
-        .stat-full { color: var(--success-green); text-shadow: 0 0 5px rgba(76, 175, 80, 0.4); }
+        
+        /* [修改] 狀態顏色 */
+        .stat-full { color: var(--success-green); text-shadow: 0 0 8px rgba(76, 175, 80, 0.4); }
+        .stat-short { color: var(--error-red); text-shadow: 0 0 8px rgba(244, 67, 54, 0.4); }
 
         .add-member-row {
             display: flex; gap: 8px; margin-bottom: 10px; flex-shrink: 0;
@@ -316,6 +316,7 @@
             </div>
         </div>
 
+        <!-- 戰力儀表板 (Updated) -->
         <div class="dashboard">
             <div class="stat-item stat-tank"><div class="job-icon tank" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-t">0</span><span class="stat-limit" id="limit-t">/2</span></div>
             <div class="stat-item stat-healer"><div class="job-icon healer" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-h">0</span><span class="stat-limit" id="limit-h">/2</span></div>
@@ -329,7 +330,7 @@
 
         <div id="roster-grid" class="roster-grid"></div>
 
-        <!-- 外找支援區 (可摺疊) - Restored -->
+        <!-- 外找支援區 (可摺疊) -->
         <div class="manual-section">
             <div class="manual-header collapsed" onclick="toggleManualSection()">
                 <span>外找支援</span>
@@ -491,7 +492,14 @@
         const elLimit = document.getElementById(`limit-${type}`);
         elVal.innerText = current;
         elLimit.innerText = `/${need}`;
-        if (current >= need) elVal.classList.add('stat-full'); else elVal.classList.remove('stat-full');
+        
+        // [新增功能] 紅綠燈邏輯
+        elVal.classList.remove('stat-full', 'stat-short');
+        if (current >= need) {
+            elVal.classList.add('stat-full'); // 綠色
+        } else {
+            elVal.classList.add('stat-short'); // 紅色
+        }
     }
 
     // --- UX 功能 ---
@@ -602,7 +610,7 @@
         updateDashboard();
     }
     
-    // [IME Fix] 只更新資料與狀態，不重繪整個列表
+    // [IME Fix] 
     function updateManualName(index, val) {
         manualState[index].name = val;
         const shouldSelect = !!val.trim();
@@ -621,7 +629,7 @@
         manualState[index].name = '';
         manualState[index].selected = false;
         manualState[index].role = 'D';
-        renderManual(); // 按鈕點擊可以重繪
+        renderManual(); 
         updateDashboard();
     }
     function setManualRole(index, role) {
@@ -692,11 +700,10 @@
         
         let tanks = [], healers = [], dps = [];
 
-        // 收集邏輯 (回復)
         const collect = (list, isManual) => {
             list.forEach(m => {
                 if(m.selected && (isManual ? m.name.trim() : true)) {
-                    // [關鍵] 手動區加上 (支援)
+                    // 手動區加上 (支援)
                     const name = isManual ? m.name + " (支援)" : m.name;
                     if(m.role === 'T') tanks.push(name);
                     else if(m.role === 'H') healers.push(name);
@@ -705,8 +712,8 @@
             });
         };
         
-        collect(rosterState, false); // 固定+新增
-        collect(manualState, true);  // 外找支援區
+        collect(rosterState, false); // 固定+新增 (無後綴)
+        collect(manualState, true);  // 外找支援區 (有後綴)
 
         // 洗牌
         const shuffle = arr => arr.sort(() => Math.random() - 0.5);
