@@ -219,6 +219,14 @@
         .duty-btn:active { transform: scale(0.98); }
         .duty-btn.loading { pointer-events: none; opacity: 0.8; filter: grayscale(0.5); }
 
+        /* --- Copy Button --- */
+        .copy-btn {
+            display: none; margin-left: 10px; background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim);
+            padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .copy-btn:hover { border-color: var(--text-white); color: var(--text-white); background: rgba(255,255,255,0.05); }
+        .copy-btn svg { width: 16px; height: 16px; margin-right: 5px; vertical-align: text-bottom; }
+
         /* --- Results (Flex) --- */
         .result-container { 
             display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; 
@@ -321,7 +329,7 @@
 
         <div id="roster-grid" class="roster-grid"></div>
 
-        <!-- 外找支援區 (可摺疊) -->
+        <!-- 外找支援區 (可摺疊) - Restored -->
         <div class="manual-section">
             <div class="manual-header collapsed" onclick="toggleManualSection()">
                 <span>外找支援</span>
@@ -346,9 +354,16 @@
                 </div>
             </div>
             
-            <button id="startBtn" class="duty-btn" onclick="handleGenerate()">
-                開始隨機分組
-            </button>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; flex:1; margin-left:20px;">
+                <button id="startBtn" class="duty-btn" style="width:100%;" onclick="handleGenerate()">
+                    開始隨機分組
+                </button>
+                <!-- Copy Button -->
+                <button id="copyBtn" class="copy-btn" onclick="copyResults()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.24a2 2 0 0 0-.59-1.41l-3.83-3.83A2 2 0 0 0 14.17 2H10a2 2 0 0 0-2 2z"/><path d="M16 2v4a2 2 0 0 0 2 2h4"/><path d="M21 14H6a2 2 0 0 1-2-2V6.65"/></svg>
+                    複製結果
+                </button>
+            </div>
         </div>
         
         <div style="text-align:right; color:#666; font-size:0.85rem; margin-top:-10px; margin-bottom:10px; padding-right:5px; flex-shrink:0;">
@@ -383,10 +398,10 @@
         "窩福", "NANA"
     ];
 
-    // isPreset: true 代表是固定名單
     let rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D', isPreset: true }));
     let manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'D' }));
     let currentTeamCount = 2;
+    let lastResults = null;
 
     function init() {
         renderRoster();
@@ -430,7 +445,6 @@
         const exists = rosterState.some(m => m.name === name);
         if(exists) { showToast(`成員 ${name} 已在名單中`, 'error'); return; }
 
-        // 新增的成員 isPreset: false
         rosterState.push({ name, selected: true, role: 'D', isPreset: false });
         input.value = '';
         renderRoster();
@@ -531,7 +545,6 @@
 
     function createCard(member, index, type) {
         const card = document.createElement('div');
-        // Add ID for direct access (IME fix)
         card.id = `${type}-card-${index}`;
         card.className = `roster-card ${member.selected ? 'active' : ''}`;
         
@@ -588,7 +601,7 @@
         renderRoster();
         updateDashboard();
     }
-
+    
     // [IME Fix] 只更新資料與狀態，不重繪整個列表
     function updateManualName(index, val) {
         manualState[index].name = val;
@@ -621,6 +634,7 @@
     // --- 運算模擬 ---
     function handleGenerate() {
         const btn = document.getElementById('startBtn');
+        const copyBtn = document.getElementById('copyBtn');
         const originalText = btn.innerText;
         
         let count = 0;
@@ -634,13 +648,41 @@
 
         btn.classList.add('loading');
         btn.innerText = "運算分配中...";
+        copyBtn.style.display = 'none'; 
         
         setTimeout(() => {
             generateTeams();
             btn.classList.remove('loading');
             btn.innerText = originalText;
+            copyBtn.style.display = 'block';
             showToast("分組完成！", "success");
         }, 600);
+    }
+
+    // --- 複製結果 ---
+    function copyResults() {
+        if (!lastResults) return;
+
+        let text = "";
+        lastResults.teams.forEach(t => {
+            text += `【第 ${t.id} 小隊】 (LIGHT PARTY)\n`;
+            text += `🛡️ ${t.t}\n`;
+            text += `💚 ${t.h}\n`;
+            text += `⚔️ ${t.d1}, ${t.d2}\n\n`;
+        });
+
+        if (lastResults.left.t.length || lastResults.left.h.length || lastResults.left.d.length) {
+            text += `【候補名單】\n`;
+            if (lastResults.left.t.length) text += `🛡️ ${lastResults.left.t.join(", ")}\n`;
+            if (lastResults.left.h.length) text += `💚 ${lastResults.left.h.join(", ")}\n`;
+            if (lastResults.left.d.length) text += `⚔️ ${lastResults.left.d.join(", ")}\n`;
+        }
+
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("已複製分組結果！", "success");
+        }).catch(() => {
+            showToast("複製失敗，請手動複製", "error");
+        });
     }
 
     // --- 分組核心 (優先滿團) ---
@@ -650,10 +692,11 @@
         
         let tanks = [], healers = [], dps = [];
 
+        // 收集邏輯 (回復)
         const collect = (list, isManual) => {
             list.forEach(m => {
                 if(m.selected && (isManual ? m.name.trim() : true)) {
-                    // [關鍵修正]：如果是由手動區塊輸入的，加上 (支援)
+                    // [關鍵] 手動區加上 (支援)
                     const name = isManual ? m.name + " (支援)" : m.name;
                     if(m.role === 'T') tanks.push(name);
                     else if(m.role === 'H') healers.push(name);
@@ -661,22 +704,27 @@
                 }
             });
         };
-        // 一般名單 (含動態新增的) 不加後綴
-        collect(rosterState, false);
-        // 手動區加 (支援)
-        collect(manualState, true);
+        
+        collect(rosterState, false); // 固定+新增
+        collect(manualState, true);  // 外找支援區
 
         // 洗牌
         const shuffle = arr => arr.sort(() => Math.random() - 0.5);
         shuffle(tanks); shuffle(healers); shuffle(dps);
+        
+        // 保存資料供複製
+        lastResults = { teams: [], left: {t:[], h:[], d:[]} };
 
         let htmlOutput = "";
 
         for(let i=0; i<teamCount; i++) {
-            const t = tanks.length ? tanks.shift() : null;
-            const h = healers.length ? healers.shift() : null;
-            const d1 = dps.length ? dps.shift() : null;
-            const d2 = dps.length ? dps.shift() : null;
+            const t = tanks.length ? tanks.shift() : "(缺員)";
+            const h = healers.length ? healers.shift() : "(缺員)";
+            const d1 = dps.length ? dps.shift() : "(缺員)";
+            const d2 = dps.length ? dps.shift() : "(缺員)";
+
+            // 紀錄資料
+            lastResults.teams.push({ id: i+1, t, h, d1, d2 });
 
             htmlOutput += `
             <div class="party-list" style="animation-delay: ${i*0.1}s">
@@ -690,6 +738,11 @@
                 ${row('dps', d2)}
             </div>`;
         }
+
+        // 候補
+        lastResults.left.t = tanks;
+        lastResults.left.h = healers;
+        lastResults.left.d = dps;
 
         if(tanks.length || healers.length || dps.length) {
             htmlOutput += `
@@ -706,16 +759,16 @@
 
     function row(role, name) {
         const icon = ICONS[role];
-        const cls = name ? 'member-name' : 'member-missing';
-        const txt = name ? name : 'Matching... (缺員)';
+        const isMissing = name === "(缺員)";
+        const cls = isMissing ? 'member-missing' : 'member-name';
         
         let badge = '';
-        if (name) {
+        if (!isMissing) {
             const iconSvg = ICONS[role];
             badge = `<div class="role-badge ${role}">${iconSvg}</div>`;
         }
 
-        return `<div class="party-member"><div class="job-icon ${role}">${icon}</div><div class="${cls}">${txt}</div>${badge}</div>`;
+        return `<div class="party-member"><div class="job-icon ${role}">${icon}</div><div class="${cls}">${name}</div>${badge}</div>`;
     }
 
     init();
