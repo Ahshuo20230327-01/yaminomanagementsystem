@@ -154,7 +154,7 @@
         .roster-card:hover .delete-btn { display: block; }
         .delete-btn:hover { color: var(--error-red); }
 
-        /* Manual Section (Collapsible) - RESTORED */
+        /* Manual Section (Collapsible) */
         .manual-section {
             border-top: 1px solid #333; padding-top: 10px; margin-top: auto; flex-shrink: 0;
         }
@@ -321,7 +321,7 @@
 
         <div id="roster-grid" class="roster-grid"></div>
 
-        <!-- 外找支援區 (Restored) -->
+        <!-- 外找支援區 (可摺疊) -->
         <div class="manual-section">
             <div class="manual-header collapsed" onclick="toggleManualSection()">
                 <span>外找支援</span>
@@ -383,6 +383,7 @@
         "窩福", "NANA"
     ];
 
+    // isPreset: true 代表是固定名單
     let rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D', isPreset: true }));
     let manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'D' }));
     let currentTeamCount = 2;
@@ -429,6 +430,7 @@
         const exists = rosterState.some(m => m.name === name);
         if(exists) { showToast(`成員 ${name} 已在名單中`, 'error'); return; }
 
+        // 新增的成員 isPreset: false
         rosterState.push({ name, selected: true, role: 'D', isPreset: false });
         input.value = '';
         renderRoster();
@@ -529,6 +531,8 @@
 
     function createCard(member, index, type) {
         const card = document.createElement('div');
+        // Add ID for direct access (IME fix)
+        card.id = `${type}-card-${index}`;
         card.className = `roster-card ${member.selected ? 'active' : ''}`;
         
         card.onclick = (e) => {
@@ -584,21 +588,27 @@
         renderRoster();
         updateDashboard();
     }
+
+    // [IME Fix] 只更新資料與狀態，不重繪整個列表
     function updateManualName(index, val) {
         manualState[index].name = val;
-        manualState[index].selected = !!val;
-        renderManual();
+        const shouldSelect = !!val.trim();
+        manualState[index].selected = shouldSelect;
+        
+        const card = document.getElementById(`manual-card-${index}`);
+        if(card) {
+            if(shouldSelect) card.classList.add('active');
+            else card.classList.remove('active');
+        }
+        
         updateDashboard();
-        setTimeout(() => {
-            const inputs = document.querySelectorAll('.manual-input');
-            if(inputs[index]) { inputs[index].focus(); inputs[index].setSelectionRange(100, 100); }
-        }, 0);
     }
+
     function clearManual(index) {
         manualState[index].name = '';
         manualState[index].selected = false;
         manualState[index].role = 'D';
-        renderManual();
+        renderManual(); // 按鈕點擊可以重繪
         updateDashboard();
     }
     function setManualRole(index, role) {
@@ -651,8 +661,9 @@
                 }
             });
         };
-        // 一般名單 (含動態新增的) 不加後綴，只有下面手動區的加
+        // 一般名單 (含動態新增的) 不加後綴
         collect(rosterState, false);
+        // 手動區加 (支援)
         collect(manualState, true);
 
         // 洗牌
