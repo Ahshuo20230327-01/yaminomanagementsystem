@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器</title>
+    <title>FF14 百萬工會懶人組隊分組器 (Optimized)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -18,7 +18,7 @@
             --healer-solid: #7ed321;
             --dps-solid: #d0021b;
             --success-green: #4caf50;
-            --error-red: #ff5252; /* 鮮豔紅，用於警示 */
+            --error-red: #ff5252;
         }
 
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -72,7 +72,7 @@
             flex-shrink: 0;
         }
 
-        /* --- Dashboard (Updated Colors) --- */
+        /* --- Dashboard --- */
         .dashboard {
             display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px;
             background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
@@ -83,7 +83,6 @@
         .stat-val { font-family: 'Noto Sans TC', sans-serif; font-weight: 700; transition: color 0.3s; }
         .stat-limit { color: #666; font-size: 0.85rem; }
         
-        /* [修改] 狀態顏色 */
         .stat-full { color: var(--success-green); text-shadow: 0 0 8px rgba(76, 175, 80, 0.4); }
         .stat-short { color: var(--error-red); text-shadow: 0 0 8px rgba(244, 67, 54, 0.4); }
 
@@ -103,12 +102,14 @@
         .add-btn:hover { background: var(--text-gold); color: #000; border-color: var(--text-gold); }
 
         /* --- Bulk Actions --- */
-        .bulk-actions { display: flex; gap: 10px; }
+        .bulk-actions { display: flex; gap: 10px; align-items: center; }
         .text-btn {
             background: none; border: none; color: var(--text-dim); font-size: 0.85rem; cursor: pointer; padding: 0;
             transition: color 0.2s; font-family: inherit;
         }
         .text-btn:hover { color: var(--text-white); text-decoration: underline; }
+        .reset-btn { color: var(--error-red); opacity: 0.7; }
+        .reset-btn:hover { color: #ff8888; opacity: 1; }
 
         /* --- Roster (Flex Grow) --- */
         .roster-grid { 
@@ -196,7 +197,7 @@
             display: flex; align-items: center; gap: 15px; margin-bottom: 15px; background: rgba(0,0,0,0.3);
             padding: 15px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); justify-content: space-between; flex-shrink: 0;
         }
-        .control-left { display: flex; flex-direction: column; gap: 5px; }
+        .control-left { display: flex; flex-direction: column; gap: 8px; }
         .control-label { color: var(--text-gold); font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; }
         
         .team-btn-group { display: flex; gap: 5px; }
@@ -208,6 +209,16 @@
         .team-btn.active {
             background: var(--text-gold); color: #000; border-color: var(--text-gold); box-shadow: 0 0 10px rgba(212, 181, 126, 0.4);
         }
+
+        /* Toggle Switch */
+        .switch-container { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-dim); }
+        .switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; border: 1px solid #555; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: #888; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: rgba(76, 175, 80, 0.2); border-color: var(--success-green); }
+        input:checked + .slider:before { transform: translateX(16px); background-color: var(--success-green); }
+        input:focus + .slider { box-shadow: 0 0 1px var(--success-green); }
 
         .duty-btn {
             flex: 1; max-width: 250px; position: relative; background: linear-gradient(180deg, #5c4d38 0%, #3d3122 100%);
@@ -313,6 +324,8 @@
                 <button class="text-btn" onclick="selectAll()">全選</button>
                 <span style="color:#444">|</span>
                 <button class="text-btn" onclick="deselectAll()">清空</button>
+                <span style="color:#444">|</span>
+                <button class="text-btn reset-btn" onclick="resetData()" title="重置為預設狀態">重置</button>
             </div>
         </div>
 
@@ -346,12 +359,24 @@
     <div class="right-panel-content">
         <div class="control-bar">
             <div class="control-left">
-                <span class="control-label">預計隊伍數量</span>
-                <div class="team-btn-group">
-                    <button class="team-btn" onclick="setTeamCount(1)" id="btn-team-1">1</button>
-                    <button class="team-btn active" onclick="setTeamCount(2)" id="btn-team-2">2</button>
-                    <button class="team-btn" onclick="setTeamCount(3)" id="btn-team-3">3</button>
-                    <button class="team-btn" onclick="setTeamCount(4)" id="btn-team-4">4</button>
+                <!-- Team Counts -->
+                <div style="display:flex; flex-direction:column; gap:5px; width:100%;">
+                    <span class="control-label">預計隊伍數量</span>
+                    <div class="team-btn-group">
+                        <button class="team-btn" onclick="setTeamCount(1)" id="btn-team-1">1</button>
+                        <button class="team-btn active" onclick="setTeamCount(2)" id="btn-team-2">2</button>
+                        <button class="team-btn" onclick="setTeamCount(3)" id="btn-team-3">3</button>
+                        <button class="team-btn" onclick="setTeamCount(4)" id="btn-team-4">4</button>
+                    </div>
+                </div>
+                
+                <!-- Storage Toggle -->
+                <div class="switch-container">
+                    <label class="switch">
+                        <input type="checkbox" id="storageToggle" onchange="toggleStorage(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                    <span style="font-size:0.85rem; color:var(--text-dim);">自動儲存設定</span>
                 </div>
             </div>
             
@@ -388,23 +413,24 @@
         clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
     };
 
-    // 注入圖示SVG
-    document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = ICONS.tank);
-    document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = ICONS.healer);
-    document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = ICONS.dps);
-
     const PRESET_NAMES = [
         "色素", "r冷", "春捲", "希妮", "Evas", 
         "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
         "窩福", "NANA"
     ];
 
-    let rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D', isPreset: true }));
-    let manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'D' }));
+    const STORAGE_KEY_ROSTER = 'ff14_roster_data_v1';
+    const STORAGE_KEY_MANUAL = 'ff14_manual_data_v1';
+    const STORAGE_KEY_PREF = 'ff14_storage_enabled';
+
+    let rosterState = [];
+    let manualState = [];
     let currentTeamCount = 2;
     let lastResults = null;
+    let isStorageEnabled = true;
 
     function init() {
+        loadState();
         renderRoster();
         renderManual();
         updateDashboard();
@@ -412,6 +438,71 @@
         document.getElementById('newMemberInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') addNewMember();
         });
+    }
+
+    // --- Persistence ---
+    function loadState() {
+        // Load preference first
+        const pref = localStorage.getItem(STORAGE_KEY_PREF);
+        isStorageEnabled = pref === null ? true : (pref === 'true');
+        
+        const toggleEl = document.getElementById('storageToggle');
+        if(toggleEl) toggleEl.checked = isStorageEnabled;
+
+        // Load data regardless of pref (if it exists, we load it. Pref mainly controls SAVING)
+        // However, if user turned off saving, they might expect a clean state on reload?
+        // Let's assume: If disabled, we load DEFAULT.
+        
+        if (!isStorageEnabled) {
+            rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D', isPreset: true }));
+            manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'D' }));
+            return;
+        }
+
+        const savedRoster = localStorage.getItem(STORAGE_KEY_ROSTER);
+        const savedManual = localStorage.getItem(STORAGE_KEY_MANUAL);
+
+        if (savedRoster) {
+            rosterState = JSON.parse(savedRoster);
+        } else {
+            rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D', isPreset: true }));
+        }
+
+        if (savedManual) {
+            manualState = JSON.parse(savedManual);
+        } else {
+            manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'D' }));
+        }
+    }
+
+    function saveState() {
+        if (!isStorageEnabled) return; // Don't save if disabled
+        localStorage.setItem(STORAGE_KEY_ROSTER, JSON.stringify(rosterState));
+        localStorage.setItem(STORAGE_KEY_MANUAL, JSON.stringify(manualState));
+    }
+
+    function toggleStorage(checked) {
+        isStorageEnabled = checked;
+        localStorage.setItem(STORAGE_KEY_PREF, isStorageEnabled);
+        
+        if (isStorageEnabled) {
+            saveState();
+            showToast("已開啟自動儲存", "success");
+        } else {
+            // If user turns off storage, clear existing data for privacy/clean slate
+            localStorage.removeItem(STORAGE_KEY_ROSTER);
+            localStorage.removeItem(STORAGE_KEY_MANUAL);
+            showToast("已關閉並清除儲存紀錄", "success");
+        }
+    }
+
+    function resetData() {
+        if(confirm("確定要重置所有名單狀態嗎？自訂成員將會消失。")) {
+            localStorage.removeItem(STORAGE_KEY_ROSTER);
+            localStorage.removeItem(STORAGE_KEY_MANUAL);
+            // Don't remove the preference
+            location.reload();
+        }
     }
 
     // --- UX: 摺疊手動區 ---
@@ -448,6 +539,7 @@
 
         rosterState.push({ name, selected: true, role: 'D', isPreset: false });
         input.value = '';
+        saveState();
         renderRoster();
         updateDashboard();
         showToast(`已新增成員：${name}`, 'success');
@@ -459,6 +551,7 @@
     function removeMember(index) {
         const name = rosterState[index].name;
         rosterState.splice(index, 1);
+        saveState();
         renderRoster();
         updateDashboard();
         showToast(`已移除：${name}`, 'success');
@@ -493,12 +586,12 @@
         elVal.innerText = current;
         elLimit.innerText = `/${need}`;
         
-        // [新增功能] 紅綠燈邏輯
+        // 紅綠燈邏輯
         elVal.classList.remove('stat-full', 'stat-short');
         if (current >= need) {
-            elVal.classList.add('stat-full'); // 綠色
+            elVal.classList.add('stat-full'); 
         } else {
-            elVal.classList.add('stat-short'); // 紅色
+            elVal.classList.add('stat-short'); 
         }
     }
 
@@ -518,12 +611,14 @@
 
     function selectAll() {
         rosterState.forEach(m => m.selected = true);
+        saveState();
         renderRoster();
         updateDashboard();
         showToast("已全選出席名單", "success");
     }
     function deselectAll() {
         rosterState.forEach(m => m.selected = false);
+        saveState();
         renderRoster();
         updateDashboard();
         showToast("已清空出席選取", "success");
@@ -535,9 +630,7 @@
         rosterState.forEach((member, index) => {
             grid.appendChild(createCard(member, index, 'preset'));
         });
-        document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = ICONS.tank);
-        document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = ICONS.healer);
-        document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = ICONS.dps);
+        injectIcons();
     }
 
     function renderManual() {
@@ -546,6 +639,10 @@
         manualState.forEach((member, index) => {
             grid.appendChild(createCard(member, index, 'manual'));
         });
+        injectIcons();
+    }
+
+    function injectIcons() {
         document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = ICONS.tank);
         document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = ICONS.healer);
         document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = ICONS.dps);
@@ -600,17 +697,18 @@
     // --- 互動邏輯 ---
     function toggleSelect(index) {
         rosterState[index].selected = !rosterState[index].selected;
+        saveState();
         renderRoster();
         updateDashboard();
     }
     function setRole(index, role) {
         rosterState[index].role = role;
         rosterState[index].selected = true;
+        saveState();
         renderRoster();
         updateDashboard();
     }
     
-    // [IME Fix] 
     function updateManualName(index, val) {
         manualState[index].name = val;
         const shouldSelect = !!val.trim();
@@ -621,7 +719,7 @@
             if(shouldSelect) card.classList.add('active');
             else card.classList.remove('active');
         }
-        
+        saveState();
         updateDashboard();
     }
 
@@ -629,12 +727,14 @@
         manualState[index].name = '';
         manualState[index].selected = false;
         manualState[index].role = 'D';
+        saveState();
         renderManual(); 
         updateDashboard();
     }
     function setManualRole(index, role) {
         manualState[index].role = role;
         if(manualState[index].name) manualState[index].selected = true;
+        saveState();
         renderManual();
         updateDashboard();
     }
@@ -693,6 +793,21 @@
         });
     }
 
+    // --- Fisher-Yates Shuffle Algorithm (Unbiased) ---
+    function shuffle(array) {
+        let currentIndex = array.length, randomIndex;
+        // While there remain elements to shuffle...
+        while (currentIndex != 0) {
+            // Pick a remaining element...
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            // And swap it with the current element.
+            [array[currentIndex], array[randomIndex]] = [
+                array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
     // --- 分組核心 (優先滿團) ---
     function generateTeams() {
         const teamCount = currentTeamCount;
@@ -703,7 +818,6 @@
         const collect = (list, isManual) => {
             list.forEach(m => {
                 if(m.selected && (isManual ? m.name.trim() : true)) {
-                    // 手動區加上 (支援)
                     const name = isManual ? m.name + " (支援)" : m.name;
                     if(m.role === 'T') tanks.push(name);
                     else if(m.role === 'H') healers.push(name);
@@ -712,12 +826,13 @@
             });
         };
         
-        collect(rosterState, false); // 固定+新增 (無後綴)
-        collect(manualState, true);  // 外找支援區 (有後綴)
+        collect(rosterState, false);
+        collect(manualState, true);
 
-        // 洗牌
-        const shuffle = arr => arr.sort(() => Math.random() - 0.5);
-        shuffle(tanks); shuffle(healers); shuffle(dps);
+        // 使用 Fisher-Yates 洗牌
+        shuffle(tanks);
+        shuffle(healers);
+        shuffle(dps);
         
         // 保存資料供複製
         lastResults = { teams: [], left: {t:[], h:[], d:[]} };
@@ -762,20 +877,24 @@
         }
 
         resultArea.innerHTML = htmlOutput;
+        // Inject Icons for results
+        setTimeout(() => injectIcons(), 0);
     }
 
     function row(role, name) {
-        const icon = ICONS[role];
+        const icon = ICONS[role]; // This will be the string SVG
         const isMissing = name === "(缺員)";
         const cls = isMissing ? 'member-missing' : 'member-name';
         
         let badge = '';
         if (!isMissing) {
-            const iconSvg = ICONS[role];
-            badge = `<div class="role-badge ${role}">${iconSvg}</div>`;
+            // Need to inject icons later or put raw svg here.
+            // Since we render string, let's just put a placeholder class or raw SVG
+            badge = `<div class="role-badge ${role}" style="display:flex;align-items:center;justify-content:center;">${ICONS[role]}</div>`;
         }
 
-        return `<div class="party-member"><div class="job-icon ${role}">${icon}</div><div class="${cls}">${name}</div>${badge}</div>`;
+        // For the main icon, we output the raw SVG string from ICONS object
+        return `<div class="party-member"><div class="job-icon ${role}" style="width:20px;height:20px;display:flex;">${ICONS[role]}</div><div class="${cls}">${name}</div>${badge}</div>`;
     }
 
     init();
