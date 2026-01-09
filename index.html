@@ -134,7 +134,7 @@
         .roster-card.active .roster-name { color: var(--text-gold); text-shadow: 0 0 8px rgba(198, 168, 107, 0.5); }
         .roster-name { font-size: 1rem; font-weight: 500; color: var(--text-dim); transition: color 0.2s; }
 
-        /* Roles */
+        /* Roles (Icons) */
         .role-switch { display: flex; gap: 5px; }
         .role-icon {
             width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
@@ -147,7 +147,14 @@
         .role-icon.h-active { background: rgba(126, 211, 33, 0.2); border-color: var(--healer-solid); color: var(--healer-solid); box-shadow: 0 0 8px var(--healer-solid); }
         .role-icon.d-active { background: rgba(208, 2, 27, 0.2); border-color: var(--dps-solid); color: var(--dps-solid); box-shadow: 0 0 8px var(--dps-solid); }
 
-        /* Manual Section (Collapsible) */
+        /* Delete Button */
+        .delete-btn {
+            margin-left: 5px; color: #444; cursor: pointer; display: none; width: 24px; text-align: center;
+        }
+        .roster-card:hover .delete-btn { display: block; }
+        .delete-btn:hover { color: var(--error-red); }
+
+        /* Manual Section (Collapsible) - RESTORED */
         .manual-section {
             border-top: 1px solid #333; padding-top: 10px; margin-top: auto; flex-shrink: 0;
         }
@@ -240,17 +247,13 @@
         .member-name { font-size: 1.1rem; font-weight: 500; }
         .member-missing { color: #555; font-style: italic; font-size: 1rem; }
 
-        /* Role Badge (Fixed) */
+        /* Role Badge */
         .role-badge {
-            margin-left: auto;
-            width: 24px; height: 24px;
+            margin-left: auto; width: 24px; height: 24px;
             display: flex; align-items: center; justify-content: center;
-            border-radius: 4px;
-            border: 1px solid;
-            background: rgba(255,255,255,0.05);
+            border-radius: 4px; border: 1px solid; background: rgba(255,255,255,0.05);
         }
         .role-badge svg { width: 14px; height: 14px; fill: currentColor; }
-        
         .role-badge.tank { color: var(--tank-solid); border-color: var(--tank-solid); background: rgba(74, 144, 226, 0.1); }
         .role-badge.healer { color: var(--healer-solid); border-color: var(--healer-solid); background: rgba(126, 211, 33, 0.1); }
         .role-badge.dps { color: var(--dps-solid); border-color: var(--dps-solid); background: rgba(208, 2, 27, 0.1); }
@@ -318,7 +321,7 @@
 
         <div id="roster-grid" class="roster-grid"></div>
 
-        <!-- 外找支援區 (可摺疊) -->
+        <!-- 外找支援區 (Restored) -->
         <div class="manual-section">
             <div class="manual-header collapsed" onclick="toggleManualSection()">
                 <span>外找支援</span>
@@ -380,7 +383,7 @@
         "窩福", "NANA"
     ];
 
-    let rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D' }));
+    let rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D', isPreset: true }));
     let manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'D' }));
     let currentTeamCount = 2;
 
@@ -426,7 +429,7 @@
         const exists = rosterState.some(m => m.name === name);
         if(exists) { showToast(`成員 ${name} 已在名單中`, 'error'); return; }
 
-        rosterState.push({ name, selected: true, role: 'D' });
+        rosterState.push({ name, selected: true, role: 'D', isPreset: false });
         input.value = '';
         renderRoster();
         updateDashboard();
@@ -434,6 +437,14 @@
         
         const grid = document.getElementById('roster-grid');
         setTimeout(() => grid.scrollTop = grid.scrollHeight, 100);
+    }
+
+    function removeMember(index) {
+        const name = rosterState[index].name;
+        rosterState.splice(index, 1);
+        renderRoster();
+        updateDashboard();
+        showToast(`已移除：${name}`, 'success');
     }
 
     function updateDashboard() {
@@ -500,9 +511,9 @@
         rosterState.forEach((member, index) => {
             grid.appendChild(createCard(member, index, 'preset'));
         });
-        document.querySelectorAll('.job-icon.tank').forEach(el => { if(!el.innerHTML) el.innerHTML = ICONS.tank });
-        document.querySelectorAll('.job-icon.healer').forEach(el => { if(!el.innerHTML) el.innerHTML = ICONS.healer });
-        document.querySelectorAll('.job-icon.dps').forEach(el => { if(!el.innerHTML) el.innerHTML = ICONS.dps });
+        document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = ICONS.tank);
+        document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = ICONS.healer);
+        document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = ICONS.dps);
     }
 
     function renderManual() {
@@ -511,9 +522,9 @@
         manualState.forEach((member, index) => {
             grid.appendChild(createCard(member, index, 'manual'));
         });
-        document.querySelectorAll('.job-icon.tank').forEach(el => { if(!el.innerHTML) el.innerHTML = ICONS.tank });
-        document.querySelectorAll('.job-icon.healer').forEach(el => { if(!el.innerHTML) el.innerHTML = ICONS.healer });
-        document.querySelectorAll('.job-icon.dps').forEach(el => { if(!el.innerHTML) el.innerHTML = ICONS.dps });
+        document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = ICONS.tank);
+        document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = ICONS.healer);
+        document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = ICONS.dps);
     }
 
     function createCard(member, index, type) {
@@ -521,7 +532,7 @@
         card.className = `roster-card ${member.selected ? 'active' : ''}`;
         
         card.onclick = (e) => {
-            if(e.target.closest('.role-icon') || e.target.closest('.manual-input') || e.target.closest('.clear-btn')) return;
+            if(e.target.closest('.role-icon') || e.target.closest('.manual-input') || e.target.closest('.clear-btn') || e.target.closest('.delete-btn')) return;
             if(type === 'preset') toggleSelect(index);
         };
 
@@ -537,12 +548,18 @@
             </div>`;
         }
 
+        const deleteHtml = (type === 'preset' && !member.isPreset) ? 
+            `<div class="delete-btn" onclick="removeMember(${index})">✕</div>` : '';
+
         card.innerHTML = `
             ${nameHtml}
-            <div class="role-switch">
-                ${createBtn(index, type, 'T', member.role)}
-                ${createBtn(index, type, 'H', member.role)}
-                ${createBtn(index, type, 'D', member.role)}
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div class="role-switch">
+                    ${createBtn(index, type, 'T', member.role)}
+                    ${createBtn(index, type, 'H', member.role)}
+                    ${createBtn(index, type, 'D', member.role)}
+                </div>
+                ${deleteHtml}
             </div>
         `;
         return card;
@@ -626,13 +643,15 @@
         const collect = (list, isManual) => {
             list.forEach(m => {
                 if(m.selected && (isManual ? m.name.trim() : true)) {
-                    const name = isManual ? m.name + "(手)" : m.name;
+                    // [關鍵修正]：如果是由手動區塊輸入的，加上 (支援)
+                    const name = isManual ? m.name + " (支援)" : m.name;
                     if(m.role === 'T') tanks.push(name);
                     else if(m.role === 'H') healers.push(name);
                     else dps.push(name);
                 }
             });
         };
+        // 一般名單 (含動態新增的) 不加後綴，只有下面手動區的加
         collect(rosterState, false);
         collect(manualState, true);
 
