@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器 (Total Overflow)</title>
+    <title>FF14 百萬工會懶人組隊分組器 (Smart 4-Man)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -827,9 +827,14 @@
             slots.forEach(slot => {
                 if (slot.data) { 
                     if (slot.data.isFlex) {
-                        flexMembers.push(slot.data.name);
+                        // isLeader check
+                        let name = slot.data.name;
+                        if(slot.data.isLeader) name += " (隊長)";
+                        flexMembers.push(name);
                     } else {
-                        lockedMembers.push(`${slot.icon} ${slot.data.name}`);
+                        let name = slot.data.name;
+                        if(slot.data.isLeader) name += " (隊長)";
+                        lockedMembers.push(`${slot.icon} ${name}`);
                     }
                 }
             });
@@ -889,9 +894,9 @@
         return array;
     }
 
-    // --- UPDATED ALGORITHM: Total Overflow (Everyone becomes Flex if slot full) ---
+    // --- UPDATED ALGORITHM: Total Overflow + Random Leader + Smart 4-Man ---
     function generateTeams() {
-        const teamCount = currentTeamCount;
+        let teamCount = currentTeamCount;
         const resultArea = document.getElementById('result-area');
         
         let lockedTanks = [], lockedHealers = [], lockedDPS = [], flexPool = [];
@@ -900,7 +905,7 @@
             list.forEach(m => {
                 if(m.selected && (isManual ? m.name.trim() : true)) {
                     const displayName = isManual ? m.name + " (支援)" : m.name;
-                    const memberObj = { name: displayName, isFlex: m.role === 'F', originalRole: m.role };
+                    const memberObj = { name: displayName, isFlex: m.role === 'F', originalRole: m.role, isLeader: false };
 
                     if(m.role === 'T') lockedTanks.push(memberObj);
                     else if(m.role === 'H') lockedHealers.push(memberObj);
@@ -911,6 +916,19 @@
         };
         collect(rosterState, false);
         collect(manualState, true);
+
+        // Smart 4-Man: If exactly 4 people are selected, force teamCount to 1
+        const totalSelected = lockedTanks.length + lockedHealers.length + lockedDPS.length + flexPool.length;
+        if (totalSelected === 4) {
+            teamCount = 1;
+            // Optionally update UI to reflect this temporary change (or just process as 1)
+            // If we want to be explicit, update the global var and button state:
+            // currentTeamCount = 1; setTeamCount(1); // But this re-triggers updateDashboard loop
+            // So we just use local variable 'teamCount' for calculation.
+            
+            // To make it clear to user, we can show a Toast? Or just do it silently.
+            // Silent is better for UX flow.
+        }
 
         shuffle(lockedTanks); shuffle(lockedHealers); shuffle(lockedDPS); shuffle(flexPool);
 
@@ -948,36 +966,46 @@
         overflowPool = overflowPool.concat(convertToFlexStyle(lockedHealers)); // Overflow H
         overflowPool = overflowPool.concat(convertToFlexStyle(lockedDPS)); // Overflow D
         
-        // Clear locked arrays
         lockedTanks = []; lockedHealers = []; lockedDPS = [];
         
-        // Merge with original Flex Pool
         let totalFlexPool = [...flexPool, ...overflowPool];
         shuffle(totalFlexPool);
 
         // Phase 3: Fill Remaining Slots with Total Flex Pool
-        // Flex can fill ANY slot (T, H, or D) that is still empty
         slots.forEach(slot => {
             if(!slot.assigned && totalFlexPool.length > 0) {
                 slot.assigned = totalFlexPool.shift(); 
             }
         });
 
-        // Leftovers are just what's left in totalFlexPool
-        // They are all conceptually Flex/Bench now
         let leftD = totalFlexPool; 
 
         // Map results
         let teamsMap = {};
         for(let i=1; i<=teamCount; i++) {
-            teamsMap[i] = { t: [], h: [], d: [] };
+            teamsMap[i] = { t: [], h: [], d: [], members: [] }; // members list for random leader
         }
 
         slots.forEach(slot => {
-            if(slot.type === 'T') teamsMap[slot.teamId].t.push(slot.assigned);
-            if(slot.type === 'H') teamsMap[slot.teamId].h.push(slot.assigned);
-            if(slot.type === 'D') teamsMap[slot.teamId].d.push(slot.assigned);
+            if(slot.assigned) {
+                teamsMap[slot.teamId].members.push(slot.assigned);
+                if(slot.type === 'T') teamsMap[slot.teamId].t.push(slot.assigned);
+                if(slot.type === 'H') teamsMap[slot.teamId].h.push(slot.assigned);
+                if(slot.type === 'D') teamsMap[slot.teamId].d.push(slot.assigned);
+            }
         });
+
+        // --- RANDOM LEADER LOGIC ---
+        // Only if teamCount >= 2
+        if (teamCount >= 2) {
+            for(let i=1; i<=teamCount; i++) {
+                const teamMembers = teamsMap[i].members;
+                if (teamMembers.length > 0) {
+                    const randomIdx = Math.floor(Math.random() * teamMembers.length);
+                    teamMembers[randomIdx].isLeader = true;
+                }
+            }
+        }
 
         lastResults = { 
             teams: [], 
@@ -1039,6 +1067,10 @@
                 nameDisplay = member.name;
             } else {
                 nameDisplay = member.name;
+            }
+            
+            if (member.isLeader) {
+                nameDisplay += ' <span style="margin-left:4px; font-size:1.1em;" title="隊長">👑</span>';
             }
         }
         
