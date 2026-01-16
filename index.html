@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器 (Optimized)</title>
+    <title>FF14 百萬工會懶人組隊分組器 (Flex Edition)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -17,6 +17,7 @@
             --tank-solid: #4a90e2;
             --healer-solid: #7ed321;
             --dps-solid: #d0021b;
+            --flex-solid: #9c27b0; /* 紫色代表補位 */
             --success-green: #4caf50;
             --error-red: #ff5252;
         }
@@ -74,7 +75,8 @@
 
         /* --- Dashboard --- */
         .dashboard {
-            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px;
+            display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; /* 改為4欄以容納 Flex 統計 */
+            gap: 5px; margin-bottom: 10px;
             background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
         }
         .stat-item {
@@ -144,9 +146,13 @@
         .role-icon svg { width: 18px; height: 18px; fill: currentColor; }
         .role-icon:hover { transform: scale(1.1); }
         .role-icon:active { transform: scale(0.95); }
+        
+        /* 增加 Flex 樣式 */
         .role-icon.t-active { background: rgba(74, 144, 226, 0.2); border-color: var(--tank-solid); color: var(--tank-solid); box-shadow: 0 0 8px var(--tank-solid); }
         .role-icon.h-active { background: rgba(126, 211, 33, 0.2); border-color: var(--healer-solid); color: var(--healer-solid); box-shadow: 0 0 8px var(--healer-solid); }
         .role-icon.d-active { background: rgba(208, 2, 27, 0.2); border-color: var(--dps-solid); color: var(--dps-solid); box-shadow: 0 0 8px var(--dps-solid); }
+        .role-icon.f-active { background: rgba(156, 39, 176, 0.2); border-color: var(--flex-solid); color: var(--flex-solid); box-shadow: 0 0 8px var(--flex-solid); }
+
 
         /* Delete Button */
         .delete-btn {
@@ -263,6 +269,9 @@
         .job-icon.tank svg { fill: var(--tank-solid); filter: drop-shadow(0 0 5px rgba(74, 144, 226, 0.4)); }
         .job-icon.healer svg { fill: var(--healer-solid); filter: drop-shadow(0 0 5px rgba(126, 211, 33, 0.4)); }
         .job-icon.dps svg { fill: var(--dps-solid); filter: drop-shadow(0 0 5px rgba(208, 2, 27, 0.4)); }
+        /* Flex Icon Style */
+        .job-icon.flex svg { fill: var(--flex-solid); filter: drop-shadow(0 0 5px rgba(156, 39, 176, 0.4)); }
+
         .member-name { font-size: 1.1rem; font-weight: 500; }
         .member-missing { color: #555; font-style: italic; font-size: 1rem; }
 
@@ -334,6 +343,11 @@
             <div class="stat-item stat-tank"><div class="job-icon tank" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-t">0</span><span class="stat-limit" id="limit-t">/2</span></div>
             <div class="stat-item stat-healer"><div class="job-icon healer" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-h">0</span><span class="stat-limit" id="limit-h">/2</span></div>
             <div class="stat-item stat-dps"><div class="job-icon dps" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-d">0</span><span class="stat-limit" id="limit-d">/4</span></div>
+            <!-- 新增 Flex 統計 -->
+            <div class="stat-item stat-flex" style="border-left:1px solid rgba(255,255,255,0.1); padding-left:5px;">
+                <div class="job-icon flex" style="width:18px;height:18px;display:inline-block"></div> 
+                <span class="stat-val" id="count-f" style="color:var(--flex-solid)">0</span>
+            </div>
         </div>
 
         <div class="add-member-row">
@@ -393,7 +407,7 @@
         </div>
         
         <div style="text-align:right; color:#666; font-size:0.85rem; margin-top:-10px; margin-bottom:10px; padding-right:5px; flex-shrink:0;">
-            * 系統將優先填滿第 1 小隊
+            * 系統將平均分配成員至各小隊
         </div>
 
         <div id="result-area" class="result-container">
@@ -410,8 +424,12 @@
         tank: '<svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>',
         healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
         dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>',
+        flex: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="7" r="2" fill="currentColor"/><circle cx="17" cy="17" r="2" fill="currentColor"/><circle cx="17" cy="7" r="2" fill="currentColor"/><circle cx="7" cy="17" r="2" fill="currentColor"/></svg>', // Mock Dice
         clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
     };
+
+    // Replace Flex Icon with a better Dice SVG
+    ICONS.flex = '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7.5 18c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
 
     const PRESET_NAMES = [
         "色素", "r冷", "春捲", "希妮", "Evas", 
@@ -442,17 +460,12 @@
 
     // --- Persistence ---
     function loadState() {
-        // Load preference first
         const pref = localStorage.getItem(STORAGE_KEY_PREF);
         isStorageEnabled = pref === null ? true : (pref === 'true');
         
         const toggleEl = document.getElementById('storageToggle');
         if(toggleEl) toggleEl.checked = isStorageEnabled;
 
-        // Load data regardless of pref (if it exists, we load it. Pref mainly controls SAVING)
-        // However, if user turned off saving, they might expect a clean state on reload?
-        // Let's assume: If disabled, we load DEFAULT.
-        
         if (!isStorageEnabled) {
             rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'D', isPreset: true }));
             manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'D' }));
@@ -476,7 +489,7 @@
     }
 
     function saveState() {
-        if (!isStorageEnabled) return; // Don't save if disabled
+        if (!isStorageEnabled) return;
         localStorage.setItem(STORAGE_KEY_ROSTER, JSON.stringify(rosterState));
         localStorage.setItem(STORAGE_KEY_MANUAL, JSON.stringify(manualState));
     }
@@ -489,7 +502,6 @@
             saveState();
             showToast("已開啟自動儲存", "success");
         } else {
-            // If user turns off storage, clear existing data for privacy/clean slate
             localStorage.removeItem(STORAGE_KEY_ROSTER);
             localStorage.removeItem(STORAGE_KEY_MANUAL);
             showToast("已關閉並清除儲存紀錄", "success");
@@ -500,12 +512,10 @@
         if(confirm("確定要重置所有名單狀態嗎？自訂成員將會消失。")) {
             localStorage.removeItem(STORAGE_KEY_ROSTER);
             localStorage.removeItem(STORAGE_KEY_MANUAL);
-            // Don't remove the preference
             location.reload();
         }
     }
 
-    // --- UX: 摺疊手動區 ---
     function toggleManualSection() {
         const header = document.querySelector('.manual-header');
         const content = document.getElementById('manual-content');
@@ -520,7 +530,6 @@
         }
     }
 
-    // --- Team Count Control ---
     function setTeamCount(num) {
         currentTeamCount = num;
         document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('active'));
@@ -528,7 +537,6 @@
         updateDashboard();
     }
 
-    // --- 核心功能擴充 ---
     function addNewMember() {
         const input = document.getElementById('newMemberInput');
         const name = input.value.trim();
@@ -558,13 +566,14 @@
     }
 
     function updateDashboard() {
-        let t = 0, h = 0, d = 0;
+        let t = 0, h = 0, d = 0, f = 0;
         const count = (list, isManual) => {
             list.forEach(m => {
                 if(m.selected && (isManual ? m.name.trim() : true)) {
                     if(m.role === 'T') t++;
                     else if(m.role === 'H') h++;
-                    else d++;
+                    else if(m.role === 'D') d++;
+                    else f++; // Role 'F' for Flex/Random
                 }
             });
         };
@@ -578,6 +587,9 @@
         updateStat('t', t, needT);
         updateStat('h', h, needH);
         updateStat('d', d, needD);
+        
+        // Flex count (just display number)
+        document.getElementById('count-f').innerText = f;
     }
 
     function updateStat(type, current, need) {
@@ -586,7 +598,6 @@
         elVal.innerText = current;
         elLimit.innerText = `/${need}`;
         
-        // 紅綠燈邏輯
         elVal.classList.remove('stat-full', 'stat-short');
         if (current >= need) {
             elVal.classList.add('stat-full'); 
@@ -595,7 +606,6 @@
         }
     }
 
-    // --- UX 功能 ---
     function showToast(msg, type = 'error') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -646,6 +656,7 @@
         document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = ICONS.tank);
         document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = ICONS.healer);
         document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = ICONS.dps);
+        document.querySelectorAll('.job-icon.flex').forEach(el => el.innerHTML = ICONS.flex);
     }
 
     function createCard(member, index, type) {
@@ -673,6 +684,7 @@
         const deleteHtml = (type === 'preset' && !member.isPreset) ? 
             `<div class="delete-btn" onclick="removeMember(${index})">✕</div>` : '';
 
+        // Added 'F' (Flex) button
         card.innerHTML = `
             ${nameHtml}
             <div style="display:flex; align-items:center; gap:8px;">
@@ -680,6 +692,7 @@
                     ${createBtn(index, type, 'T', member.role)}
                     ${createBtn(index, type, 'H', member.role)}
                     ${createBtn(index, type, 'D', member.role)}
+                    ${createBtn(index, type, 'F', member.role)}
                 </div>
                 ${deleteHtml}
             </div>
@@ -690,7 +703,7 @@
     function createBtn(index, type, roleType, currentRole) {
         const activeClass = (currentRole === roleType) ? `${roleType.toLowerCase()}-active` : '';
         const fn = type === 'preset' ? `setRole(${index}, '${roleType}')` : `setManualRole(${index}, '${roleType}')`;
-        const iconSvg = ICONS[roleType === 'T' ? 'tank' : (roleType === 'H' ? 'healer' : 'dps')];
+        const iconSvg = ICONS[roleType === 'T' ? 'tank' : (roleType === 'H' ? 'healer' : (roleType === 'D' ? 'dps' : 'flex'))];
         return `<div class="role-icon ${activeClass}" onclick="${fn}">${iconSvg}</div>`;
     }
 
@@ -767,7 +780,6 @@
         }, 600);
     }
 
-    // --- 複製結果 ---
     function copyResults() {
         if (!lastResults) return;
 
@@ -793,65 +805,115 @@
         });
     }
 
-    // --- Fisher-Yates Shuffle Algorithm (Unbiased) ---
     function shuffle(array) {
         let currentIndex = array.length, randomIndex;
-        // While there remain elements to shuffle...
         while (currentIndex != 0) {
-            // Pick a remaining element...
             randomIndex = Math.floor(Math.random() * currentIndex);
             currentIndex--;
-            // And swap it with the current element.
             [array[currentIndex], array[randomIndex]] = [
                 array[randomIndex], array[currentIndex]];
         }
         return array;
     }
 
-    // --- 分組核心 (優先滿團) ---
+    // --- NEW ALGORITHM: Vertical Slot Filling ---
     function generateTeams() {
         const teamCount = currentTeamCount;
         const resultArea = document.getElementById('result-area');
         
-        let tanks = [], healers = [], dps = [];
+        // 1. Collect all players
+        let lockedTanks = [], lockedHealers = [], lockedDPS = [], flexPool = [];
 
         const collect = (list, isManual) => {
             list.forEach(m => {
                 if(m.selected && (isManual ? m.name.trim() : true)) {
                     const name = isManual ? m.name + " (支援)" : m.name;
-                    if(m.role === 'T') tanks.push(name);
-                    else if(m.role === 'H') healers.push(name);
-                    else dps.push(name);
+                    if(m.role === 'T') lockedTanks.push(name);
+                    else if(m.role === 'H') lockedHealers.push(name);
+                    else if(m.role === 'D') lockedDPS.push(name);
+                    else flexPool.push(name); // Role 'F'
                 }
             });
         };
-        
         collect(rosterState, false);
         collect(manualState, true);
 
-        // 使用 Fisher-Yates 洗牌
-        shuffle(tanks);
-        shuffle(healers);
-        shuffle(dps);
+        // Shuffle pools
+        shuffle(lockedTanks); shuffle(lockedHealers); shuffle(lockedDPS); shuffle(flexPool);
+
+        // 2. Define Slots (Vertical Order: T1, T2, T3... then H1, H2, H3...)
+        // This ensures even distribution across teams rather than filling Team 1 completely first.
+        let slots = [];
         
-        // 保存資料供複製
-        lastResults = { teams: [], left: {t:[], h:[], d:[]} };
+        // Tanks first
+        for(let i=1; i<=teamCount; i++) slots.push({ teamId: i, role: 'tank', type: 'T', assigned: null });
+        // Healers next
+        for(let i=1; i<=teamCount; i++) slots.push({ teamId: i, role: 'healer', type: 'H', assigned: null });
+        // DPS 1
+        for(let i=1; i<=teamCount; i++) slots.push({ teamId: i, role: 'dps', type: 'D', assigned: null });
+        // DPS 2
+        for(let i=1; i<=teamCount; i++) slots.push({ teamId: i, role: 'dps', type: 'D', assigned: null });
 
+        // 3. Fill Slots with Locked Players First
+        slots.forEach(slot => {
+            if(slot.assigned) return;
+            if(slot.type === 'T' && lockedTanks.length > 0) slot.assigned = lockedTanks.shift();
+            else if(slot.type === 'H' && lockedHealers.length > 0) slot.assigned = lockedHealers.shift();
+            else if(slot.type === 'D' && lockedDPS.length > 0) slot.assigned = lockedDPS.shift();
+        });
+
+        // 4. Fill Remaining Slots with Flex Pool
+        slots.forEach(slot => {
+            if(!slot.assigned && flexPool.length > 0) {
+                slot.assigned = flexPool.shift(); // Auto-fill
+            }
+        });
+
+        // 5. Build Result Object
+        let teamsMap = {};
+        for(let i=1; i<=teamCount; i++) {
+            teamsMap[i] = { t: [], h: [], d: [] };
+        }
+
+        slots.forEach(slot => {
+            let val = slot.assigned || "(缺員)";
+            if(slot.type === 'T') teamsMap[slot.teamId].t.push(val);
+            if(slot.type === 'H') teamsMap[slot.teamId].h.push(val);
+            if(slot.type === 'D') teamsMap[slot.teamId].d.push(val);
+        });
+
+        // 6. Leftovers (Bench)
+        let leftT = lockedTanks;
+        let leftH = lockedHealers;
+        let leftD = lockedDPS;
+        // Flex leftovers are tricky, let's categorize them as general bench or split them visually?
+        // Simple approach: show them as flex bench
+        let leftF = flexPool; 
+
+        // Convert leftover Flex to generic list or distribute? 
+        // Let's just put them in 'dps' list for display simplicity or create new category?
+        // Based on existing UI, let's append them to DPS list for now or keep separate.
+        // Actually, let's just merge leftovers for display.
+        
+        lastResults = { teams: [], left: {t: leftT, h: leftH, d: [...leftD, ...leftF.map(n => n + " (補位)")]} };
+
+        // 7. Render HTML
         let htmlOutput = "";
+        
+        for(let i=1; i<=teamCount; i++) {
+            const team = teamsMap[i];
+            // Format for display
+            const t = team.t[0];
+            const h = team.h[0];
+            const d1 = team.d[0];
+            const d2 = team.d[1];
 
-        for(let i=0; i<teamCount; i++) {
-            const t = tanks.length ? tanks.shift() : "(缺員)";
-            const h = healers.length ? healers.shift() : "(缺員)";
-            const d1 = dps.length ? dps.shift() : "(缺員)";
-            const d2 = dps.length ? dps.shift() : "(缺員)";
-
-            // 紀錄資料
-            lastResults.teams.push({ id: i+1, t, h, d1, d2 });
+            lastResults.teams.push({ id: i, t, h, d1, d2 }); // Update lastResults for copy
 
             htmlOutput += `
-            <div class="party-list" style="animation-delay: ${i*0.1}s">
+            <div class="party-list" style="animation-delay: ${(i-1)*0.1}s">
                 <div class="party-header">
-                    <span>第 ${i+1} 小隊</span>
+                    <span>第 ${i} 小隊</span>
                     <span style="font-size:0.8rem; opacity:0.7">LIGHT PARTY</span>
                 </div>
                 ${row('tank', t)}
@@ -861,39 +923,36 @@
             </div>`;
         }
 
-        // 候補
-        lastResults.left.t = tanks;
-        lastResults.left.h = healers;
-        lastResults.left.d = dps;
-
-        if(tanks.length || healers.length || dps.length) {
+        if(leftT.length || leftH.length || lastResults.left.d.length) {
             htmlOutput += `
             <div class="party-list" style="border-color:#555; animation-delay: 0.3s">
                 <div class="party-header" style="color:#aaa"><span>候補 / 待機成員</span></div>
-                ${tanks.map(n => row('tank', n)).join('')}
-                ${healers.map(n => row('healer', n)).join('')}
-                ${dps.map(n => row('dps', n)).join('')}
+                ${leftT.map(n => row('tank', n)).join('')}
+                ${leftH.map(n => row('healer', n)).join('')}
+                ${lastResults.left.d.map(n => row('dps', n)).join('')} 
             </div>`;
         }
+        
+        // Note regarding flex bench: Currently they show as DPS icon in bench row(dps) or we can make a custom row.
+        // The above code merges flex leftovers into 'left.d' for simplicity in copy/paste, 
+        // but row('dps', n) will give them a sword icon. That's acceptable for bench.
 
         resultArea.innerHTML = htmlOutput;
-        // Inject Icons for results
         setTimeout(() => injectIcons(), 0);
     }
 
     function row(role, name) {
-        const icon = ICONS[role]; // This will be the string SVG
+        // If name is null/undefined (shouldn't happen due to logic), handle gracefully
+        if(!name) name = "(缺員)";
+        
         const isMissing = name === "(缺員)";
         const cls = isMissing ? 'member-missing' : 'member-name';
         
         let badge = '';
         if (!isMissing) {
-            // Need to inject icons later or put raw svg here.
-            // Since we render string, let's just put a placeholder class or raw SVG
             badge = `<div class="role-badge ${role}" style="display:flex;align-items:center;justify-content:center;">${ICONS[role]}</div>`;
         }
 
-        // For the main icon, we output the raw SVG string from ICONS object
         return `<div class="party-member"><div class="job-icon ${role}" style="width:20px;height:20px;display:flex;">${ICONS[role]}</div><div class="${cls}">${name}</div>${badge}</div>`;
     }
 
