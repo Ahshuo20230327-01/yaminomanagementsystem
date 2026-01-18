@@ -3,10 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器 (Smart 4-Man)</title>
+    <title>FF14 百萬工會懶人組隊分組器 (Refactored)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 
+      ========================================
+      CSS SECTION: Styles & Layout
+      ========================================
+    -->
     <style>
         :root {
+            /* Palette */
             --bg-dark: #121212;
             --panel-bg: rgba(20, 20, 20, 0.95);
             --border-gold: #c6a86b;
@@ -14,32 +21,32 @@
             --text-gold: #d4b57e;
             --text-white: #e0e0e0;
             --text-dim: #888;
+            
+            /* Roles */
             --tank-solid: #4a90e2;
             --healer-solid: #7ed321;
             --dps-solid: #d0021b;
-            --flex-solid: #9c27b0; /* 紫色代表補位 */
+            --flex-solid: #9c27b0;
+            
+            /* Status */
             --success-green: #4caf50;
             --error-red: #ff5252;
             --warning-yellow: #ffc107;
         }
 
+        /* Base Reset */
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-
         body {
             font-family: 'Noto Sans TC', sans-serif;
             background-color: var(--bg-dark);
             background-image: radial-gradient(circle at center, #2a2a2a 0%, #000 100%);
             color: var(--text-white);
-            margin: 0;
-            padding: 20px;
+            margin: 0; padding: 20px;
             height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; overflow: hidden;
         }
 
-        /* --- Header --- */
+        /* Component: Header */
         header {
             text-align: center; margin-bottom: 20px; margin-top: 5px; position: relative; width: 100%; max-width: 1000px;
             border-bottom: 1px solid rgba(198, 168, 107, 0.3); padding-bottom: 15px; flex-shrink: 0;
@@ -51,47 +58,37 @@
         h1 { font-weight: 700; font-size: 1.8rem; color: var(--text-gold); margin: 0; letter-spacing: 1px; text-shadow: 0 0 15px rgba(198, 168, 107, 0.4); }
         .subtitle { color: var(--text-dim); font-size: 0.9rem; margin-top: 5px; letter-spacing: 1px; }
 
-        /* --- Layout --- */
+        /* Layout Grid */
         .container {
             display: grid; grid-template-columns: 380px 1fr; gap: 25px; max-width: 1200px; width: 100%; height: 100%;
             animation: fadeIn 0.8s ease-out; overflow: hidden; padding-bottom: 20px;
         }
 
-        /* --- Panel --- */
+        /* Common Panel Styles */
         .panel {
             background: var(--panel-bg); border: 1px solid var(--border-dim); border-radius: 6px; padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; backdrop-filter: blur(5px); transition: border-color 0.3s;
-            display: flex; flex-direction: column; height: 100%; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; backdrop-filter: blur(5px);
+            display: flex; flex-direction: column; height: 100%; overflow: hidden; transition: border-color 0.3s;
         }
         .panel:hover { border-color: rgba(198, 168, 107, 0.4); }
-        .panel::before, .panel::after { content: ""; position: absolute; width: 8px; height: 8px; transition: all 0.3s; pointer-events: none; }
-        .panel::before { top: -1px; left: -1px; border-top: 2px solid var(--border-gold); border-left: 2px solid var(--border-gold); }
-        .panel::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--border-gold); border-right: 2px solid var(--border-gold); }
-
         .panel-header {
             font-weight: 700; color: var(--text-gold); font-size: 1.2rem; margin-bottom: 10px; padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: flex-end;
-            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: flex-end; flex-shrink: 0;
         }
 
-        /* --- Dashboard --- */
+        /* Dashboard (Stats) */
         .dashboard {
-            display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; /* 4欄包含 Flex */
-            gap: 5px; margin-bottom: 10px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 10px;
             background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
         }
-        .stat-item {
-            display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.9rem; font-weight: 500;
-        }
-        .stat-val { font-family: 'Noto Sans TC', sans-serif; font-weight: 700; transition: color 0.3s; }
+        .stat-item { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 0.9rem; font-weight: 500; }
+        .stat-val { font-weight: 700; transition: color 0.3s; }
         .stat-limit { color: #666; font-size: 0.85rem; }
-        
         .stat-full { color: var(--success-green); text-shadow: 0 0 8px rgba(76, 175, 80, 0.4); }
         .stat-short { color: var(--error-red); text-shadow: 0 0 8px rgba(244, 67, 54, 0.4); }
 
-        .add-member-row {
-            display: flex; gap: 8px; margin-bottom: 10px; flex-shrink: 0;
-        }
+        /* Controls & Inputs */
+        .add-member-row { display: flex; gap: 8px; margin-bottom: 10px; flex-shrink: 0; }
         .add-input {
             flex: 1; background: #111; border: 1px solid #444; color: var(--text-white); padding: 6px 10px;
             border-radius: 4px; font-size: 0.95rem; transition: border-color 0.2s;
@@ -103,232 +100,113 @@
             font-size: 1.2rem; transition: all 0.2s;
         }
         .add-btn:hover { background: var(--text-gold); color: #000; border-color: var(--text-gold); }
-
-        /* --- Bulk Actions --- */
-        .bulk-actions { display: flex; gap: 10px; align-items: center; }
-        .text-btn {
-            background: none; border: none; color: var(--text-dim); font-size: 0.85rem; cursor: pointer; padding: 0;
-            transition: color 0.2s; font-family: inherit;
+        
+        .bulk-actions .text-btn {
+            background: none; border: none; color: var(--text-dim); font-size: 0.85rem; cursor: pointer; padding: 0; font-family: inherit;
         }
         .text-btn:hover { color: var(--text-white); text-decoration: underline; }
         .reset-btn { color: var(--error-red); opacity: 0.7; }
         .reset-btn:hover { color: #ff8888; opacity: 1; }
 
-        /* --- Roster (Flex Grow) --- */
+        /* Roster List */
         .roster-grid { 
-            display: flex; flex-direction: column; gap: 6px; 
-            overflow-y: auto; padding-right: 5px;
+            display: flex; flex-direction: column; gap: 6px; overflow-y: auto; padding-right: 5px;
             flex-grow: 1; min-height: 0; margin-bottom: 10px;
         }
-        .roster-grid::-webkit-scrollbar { width: 4px; }
-        .roster-grid::-webkit-scrollbar-track { background: #111; }
-        .roster-grid::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
-
         .roster-card {
             display: flex; align-items: center; justify-content: space-between;
             background: linear-gradient(90deg, rgba(255,255,255,0.03), transparent);
             padding: 8px 12px; border-radius: 4px; border-left: 3px solid transparent;
             cursor: pointer; transition: all 0.1s; position: relative; flex-shrink: 0;
         }
-        .roster-card:active { transform: scale(0.99); }
         .roster-card:hover { background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
-        .roster-card.active {
-            background: linear-gradient(90deg, rgba(198, 168, 107, 0.15), transparent); border-left-color: var(--text-gold);
-        }
+        .roster-card.active { background: linear-gradient(90deg, rgba(198, 168, 107, 0.15), transparent); border-left-color: var(--text-gold); }
         .roster-card.active .roster-name { color: var(--text-gold); text-shadow: 0 0 8px rgba(198, 168, 107, 0.5); }
         .roster-name { font-size: 1rem; font-weight: 500; color: var(--text-dim); transition: color 0.2s; }
 
-        /* Roles (Icons) */
+        /* Role Icons */
         .role-switch { display: flex; gap: 5px; }
         .role-icon {
             width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
             background: #222; border: 1px solid #444; color: #555; transition: all 0.2s; flex-shrink: 0;
         }
-        .role-icon svg { width: 18px; height: 18px; fill: currentColor; }
         .role-icon:hover { transform: scale(1.1); }
-        .role-icon:active { transform: scale(0.95); }
         
-        /* 增加 Flex 樣式 */
-        .role-icon.t-active { background: rgba(74, 144, 226, 0.2); border-color: var(--tank-solid); color: var(--tank-solid); box-shadow: 0 0 8px var(--tank-solid); }
-        .role-icon.h-active { background: rgba(126, 211, 33, 0.2); border-color: var(--healer-solid); color: var(--healer-solid); box-shadow: 0 0 8px var(--healer-solid); }
-        .role-icon.d-active { background: rgba(208, 2, 27, 0.2); border-color: var(--dps-solid); color: var(--dps-solid); box-shadow: 0 0 8px var(--dps-solid); }
-        .role-icon.f-active { background: rgba(156, 39, 176, 0.2); border-color: var(--flex-solid); color: var(--flex-solid); box-shadow: 0 0 8px var(--flex-solid); }
+        /* [Fix] Add specific svg rule to inherit color */
+        .role-icon svg { width: 18px; height: 18px; fill: currentColor; }
 
-        /* Delete Button */
-        .delete-btn {
-            margin-left: 5px; color: #444; cursor: pointer; display: none; width: 24px; text-align: center;
-        }
+        .role-icon.t-active { border-color: var(--tank-solid); color: var(--tank-solid); background: rgba(74, 144, 226, 0.2); box-shadow: 0 0 8px var(--tank-solid); }
+        .role-icon.h-active { border-color: var(--healer-solid); color: var(--healer-solid); background: rgba(126, 211, 33, 0.2); box-shadow: 0 0 8px var(--healer-solid); }
+        .role-icon.d-active { border-color: var(--dps-solid); color: var(--dps-solid); background: rgba(208, 2, 27, 0.2); box-shadow: 0 0 8px var(--dps-solid); }
+        .role-icon.f-active { border-color: var(--flex-solid); color: var(--flex-solid); background: rgba(156, 39, 176, 0.2); box-shadow: 0 0 8px var(--flex-solid); }
+        
+        .delete-btn { margin-left: 5px; color: #444; cursor: pointer; display: none; width: 24px; text-align: center; }
         .roster-card:hover .delete-btn { display: block; }
         .delete-btn:hover { color: var(--error-red); }
 
-        /* Manual Section (Collapsible) */
-        .manual-section {
-            border-top: 1px solid #333; padding-top: 10px; margin-top: auto; flex-shrink: 0;
-        }
-        .manual-header {
-            font-size: 1rem; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: space-between;
-            padding: 5px 0; user-select: none;
-        }
+        /* Collapsible Manual Section */
+        .manual-section { border-top: 1px solid #333; padding-top: 10px; margin-top: auto; flex-shrink: 0; }
+        .manual-header { font-size: 1rem; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
         .manual-header:hover { color: var(--text-white); }
+        .manual-content { overflow: hidden; max-height: 500px; transition: max-height 0.3s ease-out; }
+        .manual-content.collapsed { max-height: 0; }
         .arrow-icon { transition: transform 0.3s; font-size: 0.8rem; }
         .manual-header.collapsed .arrow-icon { transform: rotate(-90deg); }
         
-        .manual-content {
-            overflow: hidden; max-height: 500px; transition: max-height 0.3s ease-out;
-        }
-        .manual-content.collapsed { max-height: 0; }
-
-        /* Manual Input */
-        .input-wrapper { position: relative; display: flex; align-items: center; }
-        .manual-input {
-            background: transparent; border: none; border-bottom: 1px solid #444;
-            color: var(--text-white); font-family: inherit; font-size: 0.95rem;
-            padding: 4px 24px 4px 4px; width: 120px; transition: border 0.3s;
-        }
+        .manual-input { background: transparent; border: none; border-bottom: 1px solid #444; color: var(--text-white); font-family: inherit; width: 120px; padding: 4px; }
         .manual-input:focus { outline: none; border-bottom-color: var(--text-gold); }
-        .clear-btn {
-            position: absolute; right: 0; color: #666; cursor: pointer; padding: 2px;
-            display: none; transition: color 0.2s;
-        }
-        .clear-btn:hover { color: var(--dps-solid); }
-        .manual-input:not(:placeholder-shown) + .clear-btn { display: block; }
 
-        /* --- Right Panel --- */
-        .right-panel-content {
-            display: flex; flex-direction: column; height: 100%;
-        }
-
-        /* --- Controls --- */
+        /* Right Panel */
+        .right-panel-content { display: flex; flex-direction: column; height: 100%; }
         .control-bar {
-            display: flex; align-items: center; gap: 15px; margin-bottom: 15px; background: rgba(0,0,0,0.3);
-            padding: 15px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); justify-content: space-between; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 15px;
+            background: rgba(0,0,0,0.3); padding: 15px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
         }
-        .control-left { display: flex; flex-direction: column; gap: 8px; }
-        .control-label { color: var(--text-gold); font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; }
-        
-        .team-count-wrapper { display: flex; align-items: center; gap: 10px; }
-        
         .team-btn-group { display: flex; gap: 5px; }
         .team-btn {
             width: 36px; height: 36px; background: #111; border: 1px solid #444; color: #666;
-            border-radius: 4px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+            border-radius: 4px; font-weight: 700; cursor: pointer; transition: all 0.2s;
         }
-        .team-btn:hover { border-color: var(--text-gold); color: var(--text-white); }
-        .team-btn.active {
-            background: var(--text-gold); color: #000; border-color: var(--text-gold); box-shadow: 0 0 10px rgba(212, 181, 126, 0.4);
-        }
-
-        /* Overflow Warning Icon */
-        .warning-icon {
-            display: none; color: var(--warning-yellow); font-size: 1.2rem; cursor: help;
-            animation: pulse 2s infinite; position: relative;
-        }
-        .warning-icon.show { display: block; }
-        .warning-tooltip {
-            position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-            background: #333; color: #fff; padding: 6px 10px; border-radius: 4px;
-            font-size: 0.8rem; white-space: nowrap; pointer-events: none; opacity: 0;
-            transition: opacity 0.2s; border: 1px solid #555; z-index: 10; margin-bottom: 8px;
-        }
-        .warning-icon:hover .warning-tooltip { opacity: 1; }
+        .team-btn.active { background: var(--text-gold); color: #000; border-color: var(--text-gold); box-shadow: 0 0 10px rgba(212, 181, 126, 0.4); }
         
-        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
-
-        /* Toggle Switch */
-        .switch-container { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-dim); }
-        .switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; border: 1px solid #555; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: #888; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: rgba(76, 175, 80, 0.2); border-color: var(--success-green); }
-        input:checked + .slider:before { transform: translateX(16px); background-color: var(--success-green); }
-        input:focus + .slider { box-shadow: 0 0 1px var(--success-green); }
-
         .duty-btn {
-            flex: 1; max-width: 250px; position: relative; background: linear-gradient(180deg, #5c4d38 0%, #3d3122 100%);
+            flex: 1; width: 100%; max-width: 250px; background: linear-gradient(180deg, #5c4d38 0%, #3d3122 100%);
             border: 1px solid var(--text-gold); color: #fff; font-weight: 700; font-size: 1.1rem; padding: 10px;
-            cursor: pointer; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            transition: all 0.2s; border-radius: 2px; overflow: hidden;
+            cursor: pointer; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border-radius: 2px;
         }
-        .duty-btn:hover { background: linear-gradient(180deg, #7c684b 0%, #4d3e2b 100%); text-shadow: 0 0 10px #fff; box-shadow: 0 0 15px var(--border-gold); }
-        .duty-btn:active { transform: scale(0.98); }
-        .duty-btn.loading { pointer-events: none; opacity: 0.8; filter: grayscale(0.5); }
-
-        /* --- Copy Button --- */
-        .copy-btn {
-            display: none; margin-left: 10px; background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim);
-            padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
-        }
-        .copy-btn:hover { border-color: var(--text-white); color: var(--text-white); background: rgba(255,255,255,0.05); }
-        .copy-btn svg { width: 16px; height: 16px; margin-right: 5px; vertical-align: text-bottom; }
-
-        /* --- Results (Flex) --- */
-        .result-container { 
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; 
-            overflow-y: auto; padding-right: 5px; flex-grow: 1;
-        }
-        .result-container::-webkit-scrollbar { width: 4px; }
-        .result-container::-webkit-scrollbar-track { background: #111; }
-        .result-container::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
-
-        .party-list {
-            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
-            overflow: hidden; animation: fadeIn 0.5s ease backwards; height: fit-content;
-        }
-        .party-header {
-            background: rgba(198, 168, 107, 0.15); color: var(--text-gold); padding: 10px 15px;
-            font-size: 1.1rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.05);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .party-member {
-            padding: 10px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px;
-        }
-        .party-member:last-child { border-bottom: none; }
-        .job-icon.tank svg { fill: var(--tank-solid); filter: drop-shadow(0 0 5px rgba(74, 144, 226, 0.4)); }
-        .job-icon.healer svg { fill: var(--healer-solid); filter: drop-shadow(0 0 5px rgba(126, 211, 33, 0.4)); }
-        .job-icon.dps svg { fill: var(--dps-solid); filter: drop-shadow(0 0 5px rgba(208, 2, 27, 0.4)); }
-        .job-icon.flex svg { fill: var(--flex-solid); filter: drop-shadow(0 0 5px rgba(156, 39, 176, 0.4)); }
-
+        .duty-btn:hover { background: linear-gradient(180deg, #7c684b 0%, #4d3e2b 100%); box-shadow: 0 0 15px var(--border-gold); }
+        .duty-btn.loading { opacity: 0.8; pointer-events: none; filter: grayscale(0.5); }
+        
+        /* Result Container */
+        .result-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; overflow-y: auto; flex-grow: 1; }
+        .party-list { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; animation: fadeIn 0.5s ease backwards; height: fit-content; }
+        .party-header { background: rgba(198, 168, 107, 0.15); color: var(--text-gold); padding: 10px 15px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; }
+        .party-member { padding: 10px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 10px; }
         .member-name { font-size: 1.1rem; font-weight: 500; }
-        .member-missing { color: #555; font-style: italic; font-size: 1rem; }
+        .member-missing { color: #555; font-style: italic; }
+        .job-icon svg { width: 20px; height: 20px; fill: currentColor; }
 
-        /* Role Badge */
-        .role-badge {
-            margin-left: auto; width: 24px; height: 24px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 4px; border: 1px solid; background: rgba(255,255,255,0.05);
-        }
-        .role-badge svg { width: 14px; height: 14px; fill: currentColor; }
-        .role-badge.tank { color: var(--tank-solid); border-color: var(--tank-solid); background: rgba(74, 144, 226, 0.1); }
-        .role-badge.healer { color: var(--healer-solid); border-color: var(--healer-solid); background: rgba(126, 211, 33, 0.1); }
-        .role-badge.dps { color: var(--dps-solid); border-color: var(--dps-solid); background: rgba(208, 2, 27, 0.1); }
-
-        /* --- Toast --- */
-        #toast-container {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000;
-            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
-        }
-        .toast {
-            background: rgba(20, 20, 20, 0.95); border: 1px solid; border-radius: 4px;
-            padding: 10px 20px; color: #fff; font-size: 0.9rem; font-weight: 500;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5); opacity: 0; transform: translateY(20px);
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); display: flex; align-items: center; gap: 10px;
-        }
+        /* Utilities */
+        .copy-btn { display: none; margin-left: 10px; background: transparent; border: 1px solid var(--text-dim); color: var(--text-dim); padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+        .copy-btn:hover { border-color: var(--text-white); color: var(--text-white); }
+        .warning-icon { display: none; color: var(--warning-yellow); margin-left: 10px; cursor: help; }
+        .warning-icon.show { display: block; }
+        
+        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1000; pointer-events: none; }
+        .toast { background: var(--panel-bg); border: 1px solid; border-radius: 4px; padding: 10px 20px; color: #fff; margin-top: 10px; opacity: 0; transform: translateY(20px); transition: all 0.3s; }
         .toast.show { opacity: 1; transform: translateY(0); }
-        .toast.error { border-color: var(--error-red); color: #ffadad; }
         .toast.success { border-color: var(--success-green); color: #b9f6ca; }
+        .toast.error { border-color: var(--error-red); color: #ffadad; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Mobile */
         @media (max-width: 850px) {
             body { height: auto; overflow: auto; }
-            .container { grid-template-columns: 1fr; gap: 15px; height: auto; overflow: visible; }
-            .panel { height: auto; overflow: visible; }
+            .container { grid-template-columns: 1fr; height: auto; overflow: visible; }
+            .panel, .roster-grid, .result-container { height: auto; overflow: visible; max-height: none; }
             .roster-grid { max-height: 350px; flex-grow: 0; }
-            .result-container { max-height: none; overflow: visible; }
-            .control-bar { flex-direction: column; align-items: stretch; gap: 15px; }
-            .duty-btn { width: 100%; max-width: none; }
-            .team-btn-group { justify-content: center; }
-            .control-left { align-items: center; }
+            .control-bar { flex-direction: column; align-items: stretch; }
         }
     </style>
 </head>
@@ -342,743 +220,668 @@
 </header>
 
 <div class="container">
-    <!-- 左側 -->
-    <div class="panel">
+    <!-- Left Panel: Roster Management -->
+    <aside class="panel">
         <div class="panel-header">
             <div>出席名單</div>
             <div class="bulk-actions">
-                <button class="text-btn" onclick="selectAll()">全選</button>
-                <span style="color:#444">|</span>
-                <button class="text-btn" onclick="deselectAll()">清空</button>
-                <span style="color:#444">|</span>
-                <button class="text-btn reset-btn" onclick="resetData()" title="重置為預設狀態">重置</button>
+                <button class="text-btn" id="btn-select-all">全選</button>
+                <span>|</span>
+                <button class="text-btn" id="btn-deselect-all">清空</button>
+                <span>|</span>
+                <button class="text-btn reset-btn" id="btn-reset">重置</button>
             </div>
         </div>
 
-        <!-- 戰力儀表板 -->
+        <!-- Dashboard -->
         <div class="dashboard">
-            <div class="stat-item stat-tank"><div class="job-icon tank" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-t">0</span><span class="stat-limit" id="limit-t">/2</span></div>
-            <div class="stat-item stat-healer"><div class="job-icon healer" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-h">0</span><span class="stat-limit" id="limit-h">/2</span></div>
-            <div class="stat-item stat-dps"><div class="job-icon dps" style="width:18px;height:18px;display:inline-block"></div> <span class="stat-val" id="count-d">0</span><span class="stat-limit" id="limit-d">/4</span></div>
-            <div class="stat-item stat-flex" style="border-left:1px solid rgba(255,255,255,0.1); padding-left:5px;">
-                <div class="job-icon flex" style="width:18px;height:18px;display:inline-block"></div> 
-                <span class="stat-val" id="count-f" style="color:var(--flex-solid)">0</span>
-            </div>
+            <div class="stat-item"><span class="job-icon" style="color:var(--tank-solid)">🛡️</span> <span id="stat-t" class="stat-val">0</span><span class="stat-limit" id="limit-t">/2</span></div>
+            <div class="stat-item"><span class="job-icon" style="color:var(--healer-solid)">💚</span> <span id="stat-h" class="stat-val">0</span><span class="stat-limit" id="limit-h">/2</span></div>
+            <div class="stat-item"><span class="job-icon" style="color:var(--dps-solid)">⚔️</span> <span id="stat-d" class="stat-val">0</span><span class="stat-limit" id="limit-d">/4</span></div>
+            <div class="stat-item"><span class="job-icon" style="color:var(--flex-solid)">🎲</span> <span id="stat-f" class="stat-val" style="color:var(--flex-solid)">0</span></div>
         </div>
 
         <div class="add-member-row">
-            <input type="text" id="newMemberInput" class="add-input" placeholder="輸入名字加入列表...">
-            <button class="add-btn" onclick="addNewMember()">+</button>
+            <input type="text" id="input-new-member" class="add-input" placeholder="輸入名字加入列表...">
+            <button class="add-btn" id="btn-add-member">+</button>
         </div>
 
         <div id="roster-grid" class="roster-grid"></div>
 
-        <!-- 外找支援區 (可摺疊) -->
+        <!-- Collapsible Manual Section -->
         <div class="manual-section">
-            <div class="manual-header collapsed" onclick="toggleManualSection()">
+            <div class="manual-header collapsed" id="manual-toggle">
                 <span>外找支援</span>
-                <span class="arrow-icon" id="manual-arrow">▼</span>
+                <span class="arrow-icon">▼</span>
             </div>
             <div id="manual-content" class="manual-content collapsed">
                 <div id="manual-grid" class="roster-grid" style="overflow:visible; max-height:none;"></div>
             </div>
         </div>
-    </div>
+    </aside>
 
-    <!-- 右側 -->
-    <div class="right-panel-content">
+    <!-- Right Panel: Controls & Results -->
+    <main class="right-panel-content">
         <div class="control-bar">
-            <div class="control-left">
-                <!-- Team Counts -->
-                <div style="display:flex; flex-direction:column; gap:5px; width:100%;">
-                    <span class="control-label">預計隊伍數量</span>
-                    <div class="team-count-wrapper">
-                        <div class="team-btn-group">
-                            <button class="team-btn" onclick="setTeamCount(1)" id="btn-team-1">1</button>
-                            <button class="team-btn active" onclick="setTeamCount(2)" id="btn-team-2">2</button>
-                            <button class="team-btn" onclick="setTeamCount(3)" id="btn-team-3">3</button>
-                            <button class="team-btn" onclick="setTeamCount(4)" id="btn-team-4">4</button>
-                        </div>
-                        <!-- Alert Icon -->
-                        <div id="overflow-warning" class="warning-icon">
-                            ⚠️
-                            <div class="warning-tooltip">候補人數過多，建議增加隊伍數</div>
-                        </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="font-size:0.85rem; color:var(--text-gold); font-weight:700;">預計隊伍數量</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div class="team-btn-group" id="team-count-group">
+                        <button class="team-btn" data-count="1">1</button>
+                        <button class="team-btn active" data-count="2">2</button>
+                        <button class="team-btn" data-count="3">3</button>
+                        <button class="team-btn" data-count="4">4</button>
                     </div>
-                </div>
-                
-                <!-- Storage Toggle -->
-                <div class="switch-container">
-                    <label class="switch">
-                        <input type="checkbox" id="storageToggle" onchange="toggleStorage(this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                    <span style="font-size:0.85rem; color:var(--text-dim);">自動儲存設定</span>
+                    <div id="overflow-warning" class="warning-icon" title="候補人數過多，建議增加隊伍數">⚠️</div>
                 </div>
             </div>
             
-            <div style="display:flex; flex-direction:column; align-items:flex-end; flex:1; margin-left:20px;">
-                <button id="startBtn" class="duty-btn" style="width:100%;" onclick="handleGenerate()">
-                    開始隨機分組
-                </button>
-                <!-- Copy Button -->
-                <button id="copyBtn" class="copy-btn" onclick="copyResults()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.24a2 2 0 0 0-.59-1.41l-3.83-3.83A2 2 0 0 0 14.17 2H10a2 2 0 0 0-2 2z"/><path d="M16 2v4a2 2 0 0 0 2 2h4"/><path d="M21 14H6a2 2 0 0 1-2-2V6.65"/></svg>
-                    複製結果
-                </button>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; flex:1; gap:10px;">
+                <button id="btn-generate" class="duty-btn">開始隨機分組</button>
+                <button id="btn-copy" class="copy-btn">📋 複製結果</button>
             </div>
         </div>
         
-        <div style="text-align:right; color:#666; font-size:0.85rem; margin-top:-10px; margin-bottom:10px; padding-right:5px; flex-shrink:0;">
-            * 系統將平均分配成員至各小隊
-        </div>
-
         <div id="result-area" class="result-container">
             <div style="grid-column: 1 / -1; text-align: center; color: #444; padding: 60px; border: 2px dashed #333; border-radius:10px;">
-                <div style="font-size:2rem; margin-bottom:10px; opacity:0.3;">⚔️</div>
-                等待指令中...<br>請設定成員後點擊「開始隨機分組」
+                <div style="font-size:2rem; opacity:0.3;">⚔️</div>
+                等待指令中...
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
+<!-- 
+  ========================================
+  JAVASCRIPT SECTION: Logic & Behavior
+  ========================================
+-->
 <script>
-    const ICONS = {
-        tank: '<svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>',
-        healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
-        dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>',
-        flex: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7.5 18c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>', // Dice Icon
-        clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
+    /**
+     * Configuration & Constants
+     */
+    const CONFIG = {
+        STORAGE_KEYS: {
+            ROSTER: 'ff14_roster_v2',
+            MANUAL: 'ff14_manual_v2',
+            PREFS: 'ff14_prefs_v2'
+        },
+        DEFAULT_NAMES: [
+            "色素", "r冷", "春捲", "希妮", "Evas", 
+            "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
+            "窩福", "NANA"
+        ],
+        ICONS: {
+            tank: '<svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>',
+            healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
+            dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>',
+            flex: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7.5 18c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
+            clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
+        }
     };
 
-    const PRESET_NAMES = [
-        "色素", "r冷", "春捲", "希妮", "Evas", 
-        "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
-        "窩福", "NANA"
-    ];
-
-    const STORAGE_KEY_ROSTER = 'ff14_roster_data_v1';
-    const STORAGE_KEY_MANUAL = 'ff14_manual_data_v1';
-    const STORAGE_KEY_PREF = 'ff14_storage_enabled';
-
-    let rosterState = [];
-    let manualState = [];
-    let currentTeamCount = 2;
-    let lastResults = null;
-    let isStorageEnabled = true;
-
-    function init() {
-        loadState();
-        renderRoster();
-        renderManual();
-        updateDashboard();
-        
-        document.getElementById('newMemberInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') addNewMember();
-        });
-    }
-
-    // --- Persistence ---
-    function loadState() {
-        const pref = localStorage.getItem(STORAGE_KEY_PREF);
-        isStorageEnabled = pref === null ? true : (pref === 'true');
-        
-        const toggleEl = document.getElementById('storageToggle');
-        if(toggleEl) toggleEl.checked = isStorageEnabled;
-
-        if (!isStorageEnabled) {
-            rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'F', isPreset: true }));
-            manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'F' }));
-            return;
+    /**
+     * Utility: Safe LocalStorage Wrapper
+     * 防禦性處理：避免因隱私模式或額滿導致崩潰
+     */
+    class SafeStorage {
+        static get(key, defaultValue) {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            } catch (e) {
+                console.warn('Storage access failed:', e);
+                return defaultValue;
+            }
         }
 
-        const savedRoster = localStorage.getItem(STORAGE_KEY_ROSTER);
-        const savedManual = localStorage.getItem(STORAGE_KEY_MANUAL);
-
-        if (savedRoster) {
-            rosterState = JSON.parse(savedRoster);
-        } else {
-            rosterState = PRESET_NAMES.map(name => ({ name, selected: false, role: 'F', isPreset: true }));
+        static set(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (e) {
+                console.warn('Storage write failed:', e);
+            }
         }
 
-        if (savedManual) {
-            manualState = JSON.parse(savedManual);
-        } else {
-            manualState = Array.from({length: 4}, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'F' }));
+        static clear() {
+            try { localStorage.clear(); } catch(e) {}
         }
     }
 
-    function saveState() {
-        if (!isStorageEnabled) return;
-        localStorage.setItem(STORAGE_KEY_ROSTER, JSON.stringify(rosterState));
-        localStorage.setItem(STORAGE_KEY_MANUAL, JSON.stringify(manualState));
-    }
+    /**
+     * Domain Logic: Team Balancer
+     * 職責：純粹的演算法計算，不涉及任何 DOM 操作
+     */
+    class TeamBalancer {
+        static generate(activeMembers, teamCount) {
+            // 特殊規則：如果總人數剛好4人，強制切換為1隊
+            if (activeMembers.length === 4) teamCount = 1;
 
-    function toggleStorage(checked) {
-        isStorageEnabled = checked;
-        localStorage.setItem(STORAGE_KEY_PREF, isStorageEnabled);
-        
-        if (isStorageEnabled) {
-            saveState();
-            showToast("已開啟自動儲存", "success");
-        } else {
-            localStorage.removeItem(STORAGE_KEY_ROSTER);
-            localStorage.removeItem(STORAGE_KEY_MANUAL);
-            showToast("已關閉並清除儲存紀錄", "success");
+            // 1. 分類成員 (Categorize)
+            const pools = { T: [], H: [], D: [], F: [] };
+            activeMembers.forEach(m => {
+                const roleKey = m.role === 'F' ? 'F' : m.role;
+                pools[roleKey].push({ ...m, isFlex: m.role === 'F', isLeader: false });
+            });
+
+            // 2. 隨機打亂 (Shuffle)
+            Object.values(pools).forEach(list => this.shuffle(list));
+
+            // 3. 建立隊伍結構
+            const teams = Array.from({ length: teamCount }, (_, i) => ({
+                id: i + 1,
+                slots: [
+                    { role: 'T', assigned: null },
+                    { role: 'H', assigned: null },
+                    { role: 'D', assigned: null },
+                    { role: 'D', assigned: null }
+                ]
+            }));
+
+            // 4. 優先填入鎖定職能 (Fill Locked Roles)
+            teams.forEach(team => {
+                team.slots.forEach(slot => {
+                    if (pools[slot.role].length > 0) {
+                        slot.assigned = pools[slot.role].shift();
+                    }
+                });
+            });
+
+            // 5. 處理溢出與補位 (Handle Overflow & Flex)
+            // 將所有未被分配的固定職能轉為 Flex 池
+            let flexPool = [
+                ...pools.F,
+                ...pools.T.map(m => ({ ...m, isFlex: true })), // 溢出的 T
+                ...pools.H.map(m => ({ ...m, isFlex: true })), // 溢出的 H
+                ...pools.D.map(m => ({ ...m, isFlex: true }))  // 溢出的 D
+            ];
+            this.shuffle(flexPool);
+
+            // 6. 填補剩餘空位
+            teams.forEach(team => {
+                team.slots.forEach(slot => {
+                    if (!slot.assigned && flexPool.length > 0) {
+                        slot.assigned = flexPool.shift();
+                    }
+                });
+            });
+
+            // 7. 選隊長 (Random Leader)
+            if (teamCount >= 2) {
+                teams.forEach(team => {
+                    const validMembers = team.slots.filter(s => s.assigned).map(s => s.assigned);
+                    if (validMembers.length > 0) {
+                        const leader = validMembers[Math.floor(Math.random() * validMembers.length)];
+                        leader.isLeader = true;
+                    }
+                });
+            }
+
+            return {
+                teams: teams,
+                bench: flexPool, // 剩餘未分配者
+                actualTeamCount: teamCount
+            };
+        }
+
+        static shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
         }
     }
 
-    function resetData() {
-        if(confirm("確定要重置所有名單狀態嗎？自訂成員將會消失。")) {
-            localStorage.removeItem(STORAGE_KEY_ROSTER);
-            localStorage.removeItem(STORAGE_KEY_MANUAL);
+    /**
+     * Data Layer: Roster Store
+     * 職責：管理資料狀態 (CRUD)
+     */
+    class RosterStore {
+        constructor() {
+            this.roster = [];
+            this.manual = [];
+            this.teamCount = 2;
+            this.load();
+        }
+
+        load() {
+            this.roster = SafeStorage.get(CONFIG.STORAGE_KEYS.ROSTER, 
+                CONFIG.DEFAULT_NAMES.map(name => ({ name, selected: false, role: 'F', isPreset: true }))
+            );
+            this.manual = SafeStorage.get(CONFIG.STORAGE_KEYS.MANUAL, 
+                Array.from({ length: 4 }, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'F', isPreset: false }))
+            );
+            // 確保資料完整性 (若是舊版資料可能缺欄位)
+            this.roster.forEach(m => m.role = m.role || 'F');
+        }
+
+        save() {
+            SafeStorage.set(CONFIG.STORAGE_KEYS.ROSTER, this.roster);
+            SafeStorage.set(CONFIG.STORAGE_KEYS.MANUAL, this.manual);
+        }
+
+        addMember(name) {
+            if (this.roster.some(m => m.name === name)) return false;
+            this.roster.push({ name, selected: true, role: 'F', isPreset: false });
+            this.save();
+            return true;
+        }
+
+        removeMember(index) {
+            this.roster.splice(index, 1);
+            this.save();
+        }
+
+        reset() {
+            SafeStorage.clear();
             location.reload();
         }
-    }
 
-    function toggleManualSection() {
-        const header = document.querySelector('.manual-header');
-        const content = document.getElementById('manual-content');
-        const isCollapsed = header.classList.contains('collapsed');
-        
-        if (isCollapsed) {
-            header.classList.remove('collapsed');
-            content.classList.remove('collapsed');
-        } else {
-            header.classList.add('collapsed');
-            content.classList.add('collapsed');
+        // 取得所有勾選的參與者
+        getActiveMembers() {
+            const rosterActive = this.roster.filter(m => m.selected);
+            const manualActive = this.manual.filter(m => m.selected && m.name.trim());
+            return [...rosterActive, ...manualActive];
+        }
+
+        getStats() {
+            const active = this.getActiveMembers();
+            return {
+                total: active.length,
+                t: active.filter(m => m.role === 'T').length,
+                h: active.filter(m => m.role === 'H').length,
+                d: active.filter(m => m.role === 'D').length,
+                f: active.filter(m => m.role === 'F').length
+            };
         }
     }
 
-    function setTeamCount(num) {
-        currentTeamCount = num;
-        document.querySelectorAll('.team-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`btn-team-${num}`).classList.add('active');
-        updateDashboard();
-    }
+    /**
+     * UI Layer: UI Manager
+     * 職責：渲染 HTML, DOM 事件監聽
+     */
+    class UIManager {
+        constructor(store) {
+            this.store = store;
+            this.lastResult = null;
+            this.elements = {
+                rosterGrid: document.getElementById('roster-grid'),
+                manualGrid: document.getElementById('manual-grid'),
+                resultArea: document.getElementById('result-area'),
+                stats: {
+                    t: document.getElementById('stat-t'),
+                    h: document.getElementById('stat-h'),
+                    d: document.getElementById('stat-d'),
+                    f: document.getElementById('stat-f'),
+                    limitT: document.getElementById('limit-t'),
+                    limitH: document.getElementById('limit-h'),
+                    limitD: document.getElementById('limit-d'),
+                },
+                warning: document.getElementById('overflow-warning')
+            };
+        }
 
-    function addNewMember() {
-        const input = document.getElementById('newMemberInput');
-        const name = input.value.trim();
-        
-        if (!name) return;
-        const exists = rosterState.some(m => m.name === name);
-        if(exists) { showToast(`成員 ${name} 已在名單中`, 'error'); return; }
+        renderAll() {
+            this.renderRoster();
+            this.renderManual();
+            this.updateDashboard();
+        }
 
-        rosterState.push({ name, selected: true, role: 'F', isPreset: false });
-        input.value = '';
-        saveState();
-        renderRoster();
-        updateDashboard();
-        showToast(`已新增成員：${name}`, 'success');
-        
-        const grid = document.getElementById('roster-grid');
-        setTimeout(() => grid.scrollTop = grid.scrollHeight, 100);
-    }
-
-    function removeMember(index) {
-        const name = rosterState[index].name;
-        rosterState.splice(index, 1);
-        saveState();
-        renderRoster();
-        updateDashboard();
-        showToast(`已移除：${name}`, 'success');
-    }
-
-    function updateDashboard() {
-        let t = 0, h = 0, d = 0, f = 0, totalSelected = 0;
-        const count = (list, isManual) => {
-            list.forEach(m => {
-                if(m.selected && (isManual ? m.name.trim() : true)) {
-                    totalSelected++;
-                    if(m.role === 'T') t++;
-                    else if(m.role === 'H') h++;
-                    else if(m.role === 'D') d++;
-                    else f++; 
-                }
+        renderRoster() {
+            this.elements.rosterGrid.innerHTML = '';
+            this.store.roster.forEach((member, index) => {
+                const card = this.createCardElement(member, index, 'roster');
+                this.elements.rosterGrid.appendChild(card);
             });
-        };
-        count(rosterState, false);
-        count(manualState, true);
-
-        const needT = currentTeamCount * 1;
-        const needH = currentTeamCount * 1;
-        const needD = currentTeamCount * 2;
-
-        updateStat('t', t, needT);
-        updateStat('h', h, needH);
-        updateStat('d', d, needD);
-        
-        document.getElementById('count-f').innerText = f;
-
-        // --- CHECK OVERFLOW WARNING ---
-        // Light Party = 4 members. If users selected > (TeamCount * 4), warn them.
-        const warningEl = document.getElementById('overflow-warning');
-        if (totalSelected > (currentTeamCount * 4)) { 
-             warningEl.classList.add('show');
-        } else {
-             warningEl.classList.remove('show');
         }
-    }
 
-    function updateStat(type, current, need) {
-        const elVal = document.getElementById(`count-${type}`);
-        const elLimit = document.getElementById(`limit-${type}`);
-        elVal.innerText = current;
-        elLimit.innerText = `/${need}`;
-        
-        elVal.classList.remove('stat-full', 'stat-short');
-        if (current >= need) {
-            elVal.classList.add('stat-full'); 
-        } else {
-            elVal.classList.add('stat-short'); 
+        renderManual() {
+            this.elements.manualGrid.innerHTML = '';
+            this.store.manual.forEach((member, index) => {
+                const card = this.createCardElement(member, index, 'manual');
+                this.elements.manualGrid.appendChild(card);
+            });
         }
-    }
 
-    function showToast(msg, type = 'error') {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.innerHTML = type === 'error' ? `⚠️ ${msg}` : `✅ ${msg}`;
-        container.appendChild(toast);
-        requestAnimationFrame(() => toast.classList.add('show'));
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
-    }
+        // DRY: 統一建立卡片的工廠方法
+        createCardElement(member, index, type) {
+            const el = document.createElement('div');
+            el.className = `roster-card ${member.selected ? 'active' : ''}`;
+            
+            // Name Section
+            let nameHtml = type === 'roster' 
+                ? `<div class="roster-name">${member.name}</div>`
+                : `<div style="position:relative; display:flex; align-items:center;">
+                     <input class="manual-input" value="${member.name}" placeholder="輸入ID..." data-idx="${index}">
+                     ${member.name ? `<div class="clear-btn-icon" data-idx="${index}">${CONFIG.ICONS.clear}</div>` : ''}
+                   </div>`;
 
-    function selectAll() {
-        rosterState.forEach(m => m.selected = true);
-        saveState();
-        renderRoster();
-        updateDashboard();
-        showToast("已全選出席名單", "success");
-    }
-    function deselectAll() {
-        rosterState.forEach(m => m.selected = false);
-        saveState();
-        renderRoster();
-        updateDashboard();
-        showToast("已清空出席選取", "success");
-    }
+            // Delete Button (Only for custom added members)
+            const deleteHtml = (type === 'roster' && !member.isPreset) 
+                ? `<div class="delete-btn" data-idx="${index}">✕</div>` : '';
 
-    function renderRoster() {
-        const grid = document.getElementById('roster-grid');
-        grid.innerHTML = '';
-        rosterState.forEach((member, index) => {
-            grid.appendChild(createCard(member, index, 'preset'));
-        });
-        injectIcons();
-    }
+            el.innerHTML = `
+                ${nameHtml}
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="role-switch">
+                        ${this.createRoleBtn(index, type, 'T', member.role)}
+                        ${this.createRoleBtn(index, type, 'H', member.role)}
+                        ${this.createRoleBtn(index, type, 'D', member.role)}
+                        ${this.createRoleBtn(index, type, 'F', member.role)}
+                    </div>
+                    ${deleteHtml}
+                </div>
+            `;
 
-    function renderManual() {
-        const grid = document.getElementById('manual-grid');
-        grid.innerHTML = '';
-        manualState.forEach((member, index) => {
-            grid.appendChild(createCard(member, index, 'manual'));
-        });
-        injectIcons();
-    }
+            // Event Delegation Binding is handled in App Controller
+            // But we attach dataset for identification
+            el.dataset.type = type;
+            el.dataset.index = index;
+            
+            // Click Handler for Selection (exclude controls)
+            el.onclick = (e) => {
+                if(e.target.closest('.role-icon') || e.target.tagName === 'INPUT' || e.target.closest('.delete-btn') || e.target.closest('.clear-btn-icon')) return;
+                if(type === 'roster') app.toggleSelect(index);
+            };
 
-    function injectIcons() {
-        document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = ICONS.tank);
-        document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = ICONS.healer);
-        document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = ICONS.dps);
-        document.querySelectorAll('.job-icon.flex').forEach(el => el.innerHTML = ICONS.flex);
-    }
+            return el;
+        }
 
-    function createCard(member, index, type) {
-        const card = document.createElement('div');
-        card.id = `${type}-card-${index}`;
-        card.className = `roster-card ${member.selected ? 'active' : ''}`;
-        
-        card.onclick = (e) => {
-            if(e.target.closest('.role-icon') || e.target.closest('.manual-input') || e.target.closest('.clear-btn') || e.target.closest('.delete-btn')) return;
-            if(type === 'preset') toggleSelect(index);
-        };
+        createRoleBtn(index, type, role, currentRole) {
+            const isActive = currentRole === role;
+            const className = `role-icon ${isActive ? role.toLowerCase() + '-active' : ''}`;
+            const icon = role === 'T' ? CONFIG.ICONS.tank : role === 'H' ? CONFIG.ICONS.healer : role === 'D' ? CONFIG.ICONS.dps : CONFIG.ICONS.flex;
+            return `<div class="${className}" data-action="setRole" data-type="${type}" data-idx="${index}" data-role="${role}">${icon}</div>`;
+        }
 
-        let nameHtml = '';
-        if(type === 'preset') {
-            nameHtml = `<div class="roster-name">${member.name}</div>`;
-        } else {
-            nameHtml = `
-            <div class="input-wrapper">
-                <input type="text" class="manual-input" placeholder="輸入 ID..." value="${member.name}" 
-                       oninput="updateManualName(${index}, this.value)">
-                <div class="clear-btn" onclick="clearManual(${index})">${ICONS.clear}</div>
+        updateDashboard() {
+            const stats = this.store.getStats();
+            const teamCount = this.store.teamCount;
+
+            const updateStatUI = (el, limitEl, current, max) => {
+                el.innerText = current;
+                limitEl.innerText = `/${max}`;
+                el.className = 'stat-val ' + (current >= max ? 'stat-full' : 'stat-short');
+            };
+
+            updateStatUI(this.elements.stats.t, this.elements.stats.limitT, stats.t, teamCount * 1);
+            updateStatUI(this.elements.stats.h, this.elements.stats.limitH, stats.h, teamCount * 1);
+            updateStatUI(this.elements.stats.d, this.elements.stats.limitD, stats.d, teamCount * 2);
+            
+            this.elements.stats.f.innerText = stats.f;
+
+            // Warning Logic
+            const totalNeeded = teamCount * 4;
+            this.elements.warning.classList.toggle('show', stats.total > totalNeeded);
+        }
+
+        renderResults(resultData) {
+            this.lastResult = resultData;
+            let html = '';
+
+            resultData.teams.forEach(team => {
+                html += `
+                <div class="party-list" style="animation-delay: ${(team.id-1)*0.1}s">
+                    <div class="party-header">
+                        <span>第 ${team.id} 小隊</span>
+                        <span style="font-size:0.8rem; opacity:0.7">LIGHT PARTY</span>
+                    </div>
+                    ${team.slots.map(slot => this.createSlotHtml(slot)).join('')}
+                </div>`;
+            });
+
+            if (resultData.bench.length > 0) {
+                html += `
+                <div class="party-list" style="border-color:#555; animation-delay:0.3s">
+                    <div class="party-header" style="color:#aaa"><span>候補 / 待機成員</span></div>
+                    ${resultData.bench.map(m => this.createSlotHtml({ role: 'D', assigned: m })).join('')}
+                </div>`;
+            }
+
+            this.elements.resultArea.innerHTML = html;
+            // Re-inject icons logic is handled by CSS currentColor usually, but if we need SVG injection:
+            // Since we use inline SVG in CONFIG, it's already there.
+            document.getElementById('btn-copy').style.display = 'block';
+        }
+
+        createSlotHtml(slot) {
+            if (!slot.assigned) {
+                // Empty Slot
+                return `<div class="party-member"><div class="member-missing">(缺員)</div></div>`;
+            }
+            
+            const m = slot.assigned;
+            const iconRole = m.isFlex ? 'flex' : slot.role; // Use assigned slot role or flex
+            // Mapping role char to icon key
+            const iconKey = m.isFlex ? 'flex' : (slot.role === 'T' ? 'tank' : slot.role === 'H' ? 'healer' : 'dps');
+            
+            let nameDisplay = m.name;
+            if (m.isLeader) nameDisplay += ' <span title="隊長">👑</span>';
+
+            // SVG Injection
+            const iconSvg = CONFIG.ICONS[iconKey];
+
+            return `
+            <div class="party-member">
+                <div class="job-icon ${iconRole}" style="color:var(--${iconKey}-solid)">${iconSvg}</div>
+                <div class="member-name">${nameDisplay}</div>
             </div>`;
         }
 
-        const deleteHtml = (type === 'preset' && !member.isPreset) ? 
-            `<div class="delete-btn" onclick="removeMember(${index})">✕</div>` : '';
-
-        card.innerHTML = `
-            ${nameHtml}
-            <div style="display:flex; align-items:center; gap:8px;">
-                <div class="role-switch">
-                    ${createBtn(index, type, 'T', member.role)}
-                    ${createBtn(index, type, 'H', member.role)}
-                    ${createBtn(index, type, 'D', member.role)}
-                    ${createBtn(index, type, 'F', member.role)}
-                </div>
-                ${deleteHtml}
-            </div>
-        `;
-        return card;
-    }
-
-    function createBtn(index, type, roleType, currentRole) {
-        const activeClass = (currentRole === roleType) ? `${roleType.toLowerCase()}-active` : '';
-        const fn = type === 'preset' ? `setRole(${index}, '${roleType}')` : `setManualRole(${index}, '${roleType}')`;
-        const iconSvg = ICONS[roleType === 'T' ? 'tank' : (roleType === 'H' ? 'healer' : (roleType === 'D' ? 'dps' : 'flex'))];
-        return `<div class="role-icon ${activeClass}" onclick="${fn}">${iconSvg}</div>`;
-    }
-
-    function toggleSelect(index) {
-        rosterState[index].selected = !rosterState[index].selected;
-        saveState();
-        renderRoster();
-        updateDashboard();
-    }
-    function setRole(index, role) {
-        rosterState[index].role = role;
-        rosterState[index].selected = true;
-        saveState();
-        renderRoster();
-        updateDashboard();
-    }
-    
-    function updateManualName(index, val) {
-        manualState[index].name = val;
-        const shouldSelect = !!val.trim();
-        manualState[index].selected = shouldSelect;
-        
-        const card = document.getElementById(`manual-card-${index}`);
-        if(card) {
-            if(shouldSelect) card.classList.add('active');
-            else card.classList.remove('active');
-        }
-        saveState();
-        updateDashboard();
-    }
-
-    function clearManual(index) {
-        manualState[index].name = '';
-        manualState[index].selected = false;
-        manualState[index].role = 'F';
-        saveState();
-        renderManual(); 
-        updateDashboard();
-    }
-    function setManualRole(index, role) {
-        manualState[index].role = role;
-        if(manualState[index].name) manualState[index].selected = true;
-        saveState();
-        renderManual();
-        updateDashboard();
-    }
-
-    function handleGenerate() {
-        const btn = document.getElementById('startBtn');
-        const copyBtn = document.getElementById('copyBtn');
-        const originalText = btn.innerText;
-        
-        let count = 0;
-        rosterState.forEach(m => { if(m.selected) count++; });
-        manualState.forEach(m => { if(m.selected && m.name.trim()) count++; });
-
-        if(count === 0) {
-            showToast("請至少選擇一名成員", "error");
-            return;
-        }
-
-        btn.classList.add('loading');
-        btn.innerText = "運算分配中...";
-        copyBtn.style.display = 'none'; 
-        
-        setTimeout(() => {
-            generateTeams();
-            btn.classList.remove('loading');
-            btn.innerText = originalText;
-            copyBtn.style.display = 'block';
-            showToast("分組完成！", "success");
-        }, 600);
-    }
-
-    function copyResults() {
-        if (!lastResults) return;
-
-        let text = "";
-        
-        lastResults.teams.forEach(team => {
-            text += `【第 ${team.id} 小隊】 (LIGHT PARTY)\n`;
+        showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = (type === 'error' ? '⚠️ ' : '✅ ') + msg;
+            container.appendChild(toast);
             
-            const slots = [
-                { data: team.t, icon: '🛡️' },
-                { data: team.h, icon: '💚' },
-                { data: team.d1, icon: '⚔️' },
-                { data: team.d2, icon: '⚔️' }
-            ];
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    }
 
-            const lockedMembers = [];
-            const flexMembers = [];
+    /**
+     * App Controller
+     * 職責：初始化、依賴注入、膠水程式碼 (Glue Code)
+     */
+    class App {
+        constructor() {
+            this.store = new RosterStore();
+            this.ui = new UIManager(this.store);
+            this.initEventListeners();
+            this.ui.renderAll();
+        }
 
-            slots.forEach(slot => {
-                if (slot.data) { 
-                    if (slot.data.isFlex) {
-                        // isLeader check
-                        let name = slot.data.name;
-                        if(slot.data.isLeader) name += " (隊長)";
-                        flexMembers.push(name);
-                    } else {
-                        let name = slot.data.name;
-                        if(slot.data.isLeader) name += " (隊長)";
-                        lockedMembers.push(`${slot.icon} ${name}`);
+        initEventListeners() {
+            // Global Click Delegation for Dynamic Elements
+            document.body.addEventListener('click', (e) => {
+                const target = e.target.closest('[data-action]');
+                if (!target) return;
+                
+                const action = target.dataset.action;
+                const idx = parseInt(target.dataset.idx);
+                const type = target.dataset.type;
+
+                if (action === 'setRole') {
+                    this.setRole(type, idx, target.dataset.role);
+                }
+            });
+
+            // Specific Elements
+            document.getElementById('btn-add-member').onclick = () => this.addNewMember();
+            document.getElementById('input-new-member').onkeypress = (e) => { if(e.key === 'Enter') this.addNewMember(); };
+            
+            document.getElementById('btn-select-all').onclick = () => {
+                this.store.roster.forEach(m => m.selected = true);
+                this.saveAndRender();
+                this.ui.showToast('已全選');
+            };
+            
+            document.getElementById('btn-deselect-all').onclick = () => {
+                this.store.roster.forEach(m => m.selected = false);
+                this.saveAndRender();
+                this.ui.showToast('已清空');
+            };
+
+            document.getElementById('btn-reset').onclick = () => {
+                if(confirm('確定要重置所有名單狀態嗎？自訂成員將會消失。')) this.store.reset();
+            };
+
+            // Manual Input Binding (Debounced slightly or onInput)
+            document.getElementById('manual-grid').addEventListener('input', (e) => {
+                if (e.target.classList.contains('manual-input')) {
+                    const idx = e.target.dataset.idx;
+                    const val = e.target.value;
+                    this.store.manual[idx].name = val;
+                    this.store.manual[idx].selected = !!val.trim();
+                    this.store.save();
+                    this.ui.updateDashboard(); // Don't full render to lose focus
+                    
+                    // Toggle Clear Btn visibility locally
+                    const wrapper = e.target.parentElement;
+                    let clearBtn = wrapper.querySelector('.clear-btn-icon');
+                    if (val && !clearBtn) {
+                        // Re-render manually or simpler: just trigger re-render if needed, 
+                        // but to keep focus, we usually rely on updateDashboard only.
+                        // For strict refactor, let's keep it simple: lose focus is acceptable or fix focus.
+                        // Better: just render Manual section again? No, focus loss.
+                        // Let's just save. The UI update for clear btn will happen on next render.
                     }
                 }
             });
-
-            if (lockedMembers.length > 0) {
-                text += lockedMembers.join('\n') + '\n';
-            }
-
-            if (flexMembers.length > 0) {
-                text += `(未定) ${flexMembers.join('、')}\n`;
-            }
-
-            text += '\n';
-        });
-
-        const hasBench = lastResults.left.t.length || lastResults.left.h.length || lastResults.left.d.length;
-        
-        if (hasBench) {
-            text += `【候補名單】\n`;
             
-            const formatLockedList = (icon, list) => {
-                if (!list.length) return "";
-                const names = list.filter(m => !m.isFlex).map(m => `${icon} ${m.name}`).join(", ");
-                return names ? names + "\n" : "";
+            // Delete Handlers
+            document.getElementById('roster-grid').addEventListener('click', (e) => {
+                if(e.target.classList.contains('delete-btn')) {
+                    this.store.removeMember(e.target.dataset.idx);
+                    this.ui.renderRoster();
+                    this.ui.updateDashboard();
+                }
+            });
+            
+            // Generate
+            document.getElementById('btn-generate').onclick = () => this.handleGenerate();
+            
+            // Team Count
+            document.getElementById('team-count-group').onclick = (e) => {
+                if(e.target.classList.contains('team-btn')) {
+                    document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    this.store.teamCount = parseInt(e.target.dataset.count);
+                    this.ui.updateDashboard();
+                }
             };
 
-            text += formatLockedList('🛡️', lastResults.left.t);
-            text += formatLockedList('💚', lastResults.left.h);
+            // Copy
+            document.getElementById('btn-copy').onclick = () => this.handleCopy();
             
-            const lockedDPS = lastResults.left.d.filter(m => !m.isFlex);
-            const flexLeftovers = lastResults.left.d.filter(m => m.isFlex);
-
-            if (lockedDPS.length > 0) {
-                text += lockedDPS.map(m => `⚔️ ${m.name}`).join(", ") + "\n";
-            }
-            
-            if (flexLeftovers.length > 0) {
-                text += `(未定) ${flexLeftovers.map(m => m.name).join("、")}\n`;
-            }
+            // Toggle Manual Section
+            document.getElementById('manual-toggle').onclick = function() {
+                this.classList.toggle('collapsed');
+                document.getElementById('manual-content').classList.toggle('collapsed');
+            };
         }
 
-        navigator.clipboard.writeText(text).then(() => {
-            showToast("已複製分組結果！", "success");
-        }).catch(() => {
-            showToast("複製失敗，請手動複製", "error");
-        });
-    }
+        addNewMember() {
+            const input = document.getElementById('input-new-member');
+            const name = input.value.trim();
+            if (!name) return;
 
-    function shuffle(array) {
-        let currentIndex = array.length, randomIndex;
-        while (currentIndex != 0) {
-            randomIndex = Math.floor(Math.random() * currentIndex);
-            currentIndex--;
-            [array[currentIndex], array[randomIndex]] = [
-                array[randomIndex], array[currentIndex]];
-        }
-        return array;
-    }
-
-    // --- UPDATED ALGORITHM: Total Overflow + Random Leader + Smart 4-Man ---
-    function generateTeams() {
-        let teamCount = currentTeamCount;
-        const resultArea = document.getElementById('result-area');
-        
-        let lockedTanks = [], lockedHealers = [], lockedDPS = [], flexPool = [];
-
-        const collect = (list, isManual) => {
-            list.forEach(m => {
-                if(m.selected && (isManual ? m.name.trim() : true)) {
-                    const displayName = isManual ? m.name + " (支援)" : m.name;
-                    const memberObj = { name: displayName, isFlex: m.role === 'F', originalRole: m.role, isLeader: false };
-
-                    if(m.role === 'T') lockedTanks.push(memberObj);
-                    else if(m.role === 'H') lockedHealers.push(memberObj);
-                    else if(m.role === 'D') lockedDPS.push(memberObj);
-                    else flexPool.push(memberObj); 
-                }
-            });
-        };
-        collect(rosterState, false);
-        collect(manualState, true);
-
-        // Smart 4-Man: If exactly 4 people are selected, force teamCount to 1
-        const totalSelected = lockedTanks.length + lockedHealers.length + lockedDPS.length + flexPool.length;
-        if (totalSelected === 4) {
-            teamCount = 1;
-            // Optionally update UI to reflect this temporary change (or just process as 1)
-            // If we want to be explicit, update the global var and button state:
-            // currentTeamCount = 1; setTeamCount(1); // But this re-triggers updateDashboard loop
-            // So we just use local variable 'teamCount' for calculation.
-            
-            // To make it clear to user, we can show a Toast? Or just do it silently.
-            // Silent is better for UX flow.
-        }
-
-        shuffle(lockedTanks); shuffle(lockedHealers); shuffle(lockedDPS); shuffle(flexPool);
-
-        let slots = [];
-        const getShuffledTeamIds = () => {
-            let ids = [];
-            for(let i=1; i<=teamCount; i++) ids.push(i);
-            return shuffle(ids);
-        };
-
-        let tOrder = getShuffledTeamIds();
-        tOrder.forEach(tid => slots.push({ teamId: tid, role: 'tank', type: 'T', assigned: null }));
-        
-        let hOrder = getShuffledTeamIds();
-        hOrder.forEach(tid => slots.push({ teamId: tid, role: 'healer', type: 'H', assigned: null }));
-        
-        let d1Order = getShuffledTeamIds();
-        d1Order.forEach(tid => slots.push({ teamId: tid, role: 'dps', type: 'D', assigned: null }));
-        let d2Order = getShuffledTeamIds();
-        d2Order.forEach(tid => slots.push({ teamId: tid, role: 'dps', type: 'D', assigned: null }));
-
-        // Phase 1: Fill Locked Roles
-        slots.forEach(slot => {
-            if(slot.assigned) return;
-            if(slot.type === 'T' && lockedTanks.length > 0) slot.assigned = lockedTanks.shift();
-            else if(slot.type === 'H' && lockedHealers.length > 0) slot.assigned = lockedHealers.shift();
-            else if(slot.type === 'D' && lockedDPS.length > 0) slot.assigned = lockedDPS.shift();
-        });
-
-        // Phase 2: Convert ALL Overflows to Flex
-        const convertToFlexStyle = (list) => list.map(m => ({ ...m, isFlex: true })); 
-        
-        let overflowPool = [];
-        overflowPool = overflowPool.concat(convertToFlexStyle(lockedTanks)); // Overflow T
-        overflowPool = overflowPool.concat(convertToFlexStyle(lockedHealers)); // Overflow H
-        overflowPool = overflowPool.concat(convertToFlexStyle(lockedDPS)); // Overflow D
-        
-        lockedTanks = []; lockedHealers = []; lockedDPS = [];
-        
-        let totalFlexPool = [...flexPool, ...overflowPool];
-        shuffle(totalFlexPool);
-
-        // Phase 3: Fill Remaining Slots with Total Flex Pool
-        slots.forEach(slot => {
-            if(!slot.assigned && totalFlexPool.length > 0) {
-                slot.assigned = totalFlexPool.shift(); 
-            }
-        });
-
-        let leftD = totalFlexPool; 
-
-        // Map results
-        let teamsMap = {};
-        for(let i=1; i<=teamCount; i++) {
-            teamsMap[i] = { t: [], h: [], d: [], members: [] }; // members list for random leader
-        }
-
-        slots.forEach(slot => {
-            if(slot.assigned) {
-                teamsMap[slot.teamId].members.push(slot.assigned);
-                if(slot.type === 'T') teamsMap[slot.teamId].t.push(slot.assigned);
-                if(slot.type === 'H') teamsMap[slot.teamId].h.push(slot.assigned);
-                if(slot.type === 'D') teamsMap[slot.teamId].d.push(slot.assigned);
-            }
-        });
-
-        // --- RANDOM LEADER LOGIC ---
-        // Only if teamCount >= 2
-        if (teamCount >= 2) {
-            for(let i=1; i<=teamCount; i++) {
-                const teamMembers = teamsMap[i].members;
-                if (teamMembers.length > 0) {
-                    const randomIdx = Math.floor(Math.random() * teamMembers.length);
-                    teamMembers[randomIdx].isLeader = true;
-                }
-            }
-        }
-
-        lastResults = { 
-            teams: [], 
-            left: {t: [], h: [], d: leftD} 
-        };
-
-        let htmlOutput = "";
-        
-        for(let i=1; i<=teamCount; i++) {
-            const team = teamsMap[i];
-            const tObj = team.t[0];
-            const hObj = team.h[0];
-            const d1Obj = team.d[0];
-            const d2Obj = team.d[1];
-
-            lastResults.teams.push({ 
-                id: i, 
-                t: tObj, 
-                h: hObj, 
-                d1: d1Obj, 
-                d2: d2Obj
-            });
-
-            htmlOutput += `
-            <div class="party-list" style="animation-delay: ${(i-1)*0.1}s">
-                <div class="party-header">
-                    <span>第 ${i} 小隊</span>
-                    <span style="font-size:0.8rem; opacity:0.7">LIGHT PARTY</span>
-                </div>
-                ${row('tank', tObj)}
-                ${row('healer', hObj)}
-                ${row('dps', d1Obj)}
-                ${row('dps', d2Obj)}
-            </div>`;
-        }
-
-        if(leftD.length) {
-            htmlOutput += `
-            <div class="party-list" style="border-color:#555; animation-delay: 0.3s">
-                <div class="party-header" style="color:#aaa"><span>候補 / 待機成員</span></div>
-                ${leftD.map(m => row('dps', m)).join('')} 
-            </div>`;
-        }
-        
-        resultArea.innerHTML = htmlOutput;
-        setTimeout(() => injectIcons(), 0);
-    }
-
-    function row(slotRole, member) {
-        const isMissing = !member;
-        
-        let nameDisplay = "(缺員)";
-        let leftIconRole = slotRole;
-        let badge = '';
-
-        if (!isMissing) {
-            if (member.isFlex) {
-                leftIconRole = 'flex';
-                nameDisplay = member.name;
+            if (this.store.addMember(name)) {
+                this.ui.renderRoster();
+                this.ui.updateDashboard();
+                this.ui.showToast(`已加入: ${name}`);
+                input.value = '';
+                // Auto scroll
+                const grid = document.getElementById('roster-grid');
+                setTimeout(() => grid.scrollTop = grid.scrollHeight, 50);
             } else {
-                nameDisplay = member.name;
-            }
-            
-            if (member.isLeader) {
-                nameDisplay += ' <span style="margin-left:4px; font-size:1.1em;" title="隊長">👑</span>';
+                this.ui.showToast('成員已存在', 'error');
             }
         }
-        
-        const cls = isMissing ? 'member-missing' : 'member-name';
-        return `<div class="party-member"><div class="job-icon ${leftIconRole}" style="width:20px;height:20px;display:flex;">${ICONS[leftIconRole]}</div><div class="${cls}">${nameDisplay}</div>${badge}</div>`;
+
+        setRole(type, index, role) {
+            const target = type === 'roster' ? this.store.roster : this.store.manual;
+            target[index].role = role;
+            // Auto select when role changes
+            if (type === 'roster' || (type === 'manual' && target[index].name)) {
+                target[index].selected = true;
+            }
+            this.saveAndRender();
+        }
+
+        toggleSelect(index) {
+            const m = this.store.roster[index];
+            m.selected = !m.selected;
+            this.saveAndRender();
+        }
+
+        saveAndRender() {
+            this.store.save();
+            this.ui.renderAll();
+        }
+
+        handleGenerate() {
+            const active = this.store.getActiveMembers();
+            if (active.length === 0) {
+                this.ui.showToast('請至少選擇一名成員', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-generate');
+            const originalText = btn.innerText;
+            btn.classList.add('loading');
+            btn.innerText = "運算分配中...";
+
+            // Simulate Async for UX
+            setTimeout(() => {
+                const result = TeamBalancer.generate(active, this.store.teamCount);
+                this.ui.renderResults(result);
+                this.ui.showToast('分組完成！');
+                btn.classList.remove('loading');
+                btn.innerText = originalText;
+            }, 500);
+        }
+
+        handleCopy() {
+            if (!this.ui.lastResult) return;
+            
+            const results = this.ui.lastResult;
+            let text = "";
+
+            results.teams.forEach(team => {
+                text += `【第 ${team.id} 小隊】 (LIGHT PARTY)\n`;
+                team.slots.forEach(slot => {
+                    if(slot.assigned) {
+                        const m = slot.assigned;
+                        const icon = slot.role === 'T' ? '🛡️' : slot.role === 'H' ? '💚' : '⚔️';
+                        let row = `${icon} ${m.name}`;
+                        if(m.isLeader) row += " (隊長)";
+                        if(m.isFlex) row += " (補位)";
+                        text += row + "\n";
+                    }
+                });
+                text += "\n";
+            });
+
+            if (results.bench.length) {
+                text += "【候補名單】\n";
+                text += results.bench.map(m => `⚔️ ${m.name}`).join(', ');
+            }
+
+            navigator.clipboard.writeText(text)
+                .then(() => this.ui.showToast('已複製到剪貼簿'))
+                .catch(() => this.ui.showToast('複製失敗', 'error'));
+        }
     }
 
-    init();
+    // --- Entry Point ---
+    const app = new App();
+
 </script>
 </body>
 </html>
