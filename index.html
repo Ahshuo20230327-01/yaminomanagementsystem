@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器 (Refactored)</title>
+    <title>FF14 百萬工會懶人組隊分組器 (Ultimate Refactor)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <!-- 
@@ -298,7 +298,8 @@
 -->
 <script>
     /**
-     * Configuration & Constants
+     * Configuration
+     * Now clean and free of large asset strings.
      */
     const CONFIG = {
         STORAGE_KEYS: {
@@ -310,19 +311,11 @@
             "色素", "r冷", "春捲", "希妮", "Evas", 
             "亞子醬", "幼稚園のCrow", "宅K", "阿草", "風愉", 
             "窩福", "NANA"
-        ],
-        ICONS: {
-            tank: '<svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>',
-            healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
-            dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>',
-            flex: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7.5 18c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
-            clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
-        }
+        ]
     };
 
     /**
      * Utility: Safe LocalStorage Wrapper
-     * 防禦性處理：避免因隱私模式或額滿導致崩潰
      */
     class SafeStorage {
         static get(key, defaultValue) {
@@ -350,25 +343,50 @@
 
     /**
      * Domain Logic: Team Balancer
-     * 職責：純粹的演算法計算，不涉及任何 DOM 操作
+     * Refactored to eliminate "Long Method" code smell.
      */
     class TeamBalancer {
         static generate(activeMembers, teamCount) {
-            // 特殊規則：如果總人數剛好4人，強制切換為1隊
+            // Edge Case: Force 1 team if exactly 4 members
             if (activeMembers.length === 4) teamCount = 1;
 
-            // 1. 分類成員 (Categorize)
+            // Step 1: Categorize members into roles
+            const pools = this._categorizeMembers(activeMembers);
+
+            // Step 2: Initialize empty team slots
+            const teams = this._initializeTeams(teamCount);
+
+            // Step 3: Fill locked roles (Tank/Healer/DPS)
+            this._fillLockedRoles(teams, pools);
+
+            // Step 4: Handle overflows and fill remaining slots with Flex members
+            this._fillFlexRoles(teams, pools);
+
+            // Step 5: Assign leaders
+            this._assignLeaders(teams, teamCount);
+
+            return {
+                teams: teams,
+                bench: pools.flex, // Remaining flex pool is the bench
+                actualTeamCount: teamCount
+            };
+        }
+
+        // --- Private Helper Methods ---
+
+        static _categorizeMembers(members) {
             const pools = { T: [], H: [], D: [], F: [] };
-            activeMembers.forEach(m => {
+            members.forEach(m => {
                 const roleKey = m.role === 'F' ? 'F' : m.role;
                 pools[roleKey].push({ ...m, isFlex: m.role === 'F', isLeader: false });
             });
-
-            // 2. 隨機打亂 (Shuffle)
+            // Shuffle initially to ensure randomness
             Object.values(pools).forEach(list => this.shuffle(list));
+            return pools;
+        }
 
-            // 3. 建立隊伍結構
-            const teams = Array.from({ length: teamCount }, (_, i) => ({
+        static _initializeTeams(count) {
+            return Array.from({ length: count }, (_, i) => ({
                 id: i + 1,
                 slots: [
                     { role: 'T', assigned: null },
@@ -377,8 +395,9 @@
                     { role: 'D', assigned: null }
                 ]
             }));
+        }
 
-            // 4. 優先填入鎖定職能 (Fill Locked Roles)
+        static _fillLockedRoles(teams, pools) {
             teams.forEach(team => {
                 team.slots.forEach(slot => {
                     if (pools[slot.role].length > 0) {
@@ -386,42 +405,38 @@
                     }
                 });
             });
+        }
 
-            // 5. 處理溢出與補位 (Handle Overflow & Flex)
-            // 將所有未被分配的固定職能轉為 Flex 池
+        static _fillFlexRoles(teams, pools) {
+            // Combine all unassigned specialized roles into the flex pool (Overflow)
             let flexPool = [
                 ...pools.F,
-                ...pools.T.map(m => ({ ...m, isFlex: true })), // 溢出的 T
-                ...pools.H.map(m => ({ ...m, isFlex: true })), // 溢出的 H
-                ...pools.D.map(m => ({ ...m, isFlex: true }))  // 溢出的 D
+                ...pools.T.map(m => ({ ...m, isFlex: true })),
+                ...pools.H.map(m => ({ ...m, isFlex: true })),
+                ...pools.D.map(m => ({ ...m, isFlex: true }))
             ];
+            
             this.shuffle(flexPool);
+            pools.flex = flexPool; // Reference for bench later
 
-            // 6. 填補剩餘空位
             teams.forEach(team => {
                 team.slots.forEach(slot => {
-                    if (!slot.assigned && flexPool.length > 0) {
-                        slot.assigned = flexPool.shift();
+                    if (!slot.assigned && pools.flex.length > 0) {
+                        slot.assigned = pools.flex.shift();
                     }
                 });
             });
+        }
 
-            // 7. 選隊長 (Random Leader)
-            if (teamCount >= 2) {
-                teams.forEach(team => {
-                    const validMembers = team.slots.filter(s => s.assigned).map(s => s.assigned);
-                    if (validMembers.length > 0) {
-                        const leader = validMembers[Math.floor(Math.random() * validMembers.length)];
-                        leader.isLeader = true;
-                    }
-                });
-            }
-
-            return {
-                teams: teams,
-                bench: flexPool, // 剩餘未分配者
-                actualTeamCount: teamCount
-            };
+        static _assignLeaders(teams, teamCount) {
+            if (teamCount < 2) return;
+            teams.forEach(team => {
+                const validMembers = team.slots.filter(s => s.assigned).map(s => s.assigned);
+                if (validMembers.length > 0) {
+                    const leader = validMembers[Math.floor(Math.random() * validMembers.length)];
+                    leader.isLeader = true;
+                }
+            });
         }
 
         static shuffle(array) {
@@ -435,7 +450,6 @@
 
     /**
      * Data Layer: Roster Store
-     * 職責：管理資料狀態 (CRUD)
      */
     class RosterStore {
         constructor() {
@@ -452,7 +466,6 @@
             this.manual = SafeStorage.get(CONFIG.STORAGE_KEYS.MANUAL, 
                 Array.from({ length: 4 }, (_, i) => ({ id: `m${i}`, name: '', selected: false, role: 'F', isPreset: false }))
             );
-            // 確保資料完整性 (若是舊版資料可能缺欄位)
             this.roster.forEach(m => m.role = m.role || 'F');
         }
 
@@ -478,7 +491,6 @@
             location.reload();
         }
 
-        // 取得所有勾選的參與者
         getActiveMembers() {
             const rosterActive = this.roster.filter(m => m.selected);
             const manualActive = this.manual.filter(m => m.selected && m.name.trim());
@@ -499,7 +511,6 @@
 
     /**
      * UI Layer: UI Manager
-     * 職責：渲染 HTML, DOM 事件監聽
      */
     class UIManager {
         constructor(store) {
@@ -531,33 +542,28 @@
         renderRoster() {
             this.elements.rosterGrid.innerHTML = '';
             this.store.roster.forEach((member, index) => {
-                const card = this.createCardElement(member, index, 'roster');
-                this.elements.rosterGrid.appendChild(card);
+                this.elements.rosterGrid.appendChild(this.createCardElement(member, index, 'roster'));
             });
         }
 
         renderManual() {
             this.elements.manualGrid.innerHTML = '';
             this.store.manual.forEach((member, index) => {
-                const card = this.createCardElement(member, index, 'manual');
-                this.elements.manualGrid.appendChild(card);
+                this.elements.manualGrid.appendChild(this.createCardElement(member, index, 'manual'));
             });
         }
 
-        // DRY: 統一建立卡片的工廠方法
         createCardElement(member, index, type) {
             const el = document.createElement('div');
             el.className = `roster-card ${member.selected ? 'active' : ''}`;
             
-            // Name Section
             let nameHtml = type === 'roster' 
                 ? `<div class="roster-name">${member.name}</div>`
                 : `<div style="position:relative; display:flex; align-items:center;">
                      <input class="manual-input" value="${member.name}" placeholder="輸入ID..." data-idx="${index}">
-                     ${member.name ? `<div class="clear-btn-icon" data-idx="${index}">${CONFIG.ICONS.clear}</div>` : ''}
+                     ${member.name ? `<div class="clear-btn-icon" data-idx="${index}">${IconAssets.get('clear')}</div>` : ''}
                    </div>`;
 
-            // Delete Button (Only for custom added members)
             const deleteHtml = (type === 'roster' && !member.isPreset) 
                 ? `<div class="delete-btn" data-idx="${index}">✕</div>` : '';
 
@@ -574,12 +580,9 @@
                 </div>
             `;
 
-            // Event Delegation Binding is handled in App Controller
-            // But we attach dataset for identification
             el.dataset.type = type;
             el.dataset.index = index;
             
-            // Click Handler for Selection (exclude controls)
             el.onclick = (e) => {
                 if(e.target.closest('.role-icon') || e.target.tagName === 'INPUT' || e.target.closest('.delete-btn') || e.target.closest('.clear-btn-icon')) return;
                 if(type === 'roster') app.toggleSelect(index);
@@ -591,14 +594,13 @@
         createRoleBtn(index, type, role, currentRole) {
             const isActive = currentRole === role;
             const className = `role-icon ${isActive ? role.toLowerCase() + '-active' : ''}`;
-            const icon = role === 'T' ? CONFIG.ICONS.tank : role === 'H' ? CONFIG.ICONS.healer : role === 'D' ? CONFIG.ICONS.dps : CONFIG.ICONS.flex;
-            return `<div class="${className}" data-action="setRole" data-type="${type}" data-idx="${index}" data-role="${role}">${icon}</div>`;
+            const iconKey = role === 'T' ? 'tank' : role === 'H' ? 'healer' : role === 'D' ? 'dps' : 'flex';
+            return `<div class="${className}" data-action="setRole" data-type="${type}" data-idx="${index}" data-role="${role}">${IconAssets.get(iconKey)}</div>`;
         }
 
         updateDashboard() {
             const stats = this.store.getStats();
             const teamCount = this.store.teamCount;
-
             const updateStatUI = (el, limitEl, current, max) => {
                 el.innerText = current;
                 limitEl.innerText = `/${max}`;
@@ -608,10 +610,8 @@
             updateStatUI(this.elements.stats.t, this.elements.stats.limitT, stats.t, teamCount * 1);
             updateStatUI(this.elements.stats.h, this.elements.stats.limitH, stats.h, teamCount * 1);
             updateStatUI(this.elements.stats.d, this.elements.stats.limitD, stats.d, teamCount * 2);
-            
             this.elements.stats.f.innerText = stats.f;
 
-            // Warning Logic
             const totalNeeded = teamCount * 4;
             this.elements.warning.classList.toggle('show', stats.total > totalNeeded);
         }
@@ -640,31 +640,22 @@
             }
 
             this.elements.resultArea.innerHTML = html;
-            // Re-inject icons logic is handled by CSS currentColor usually, but if we need SVG injection:
-            // Since we use inline SVG in CONFIG, it's already there.
             document.getElementById('btn-copy').style.display = 'block';
         }
 
         createSlotHtml(slot) {
-            if (!slot.assigned) {
-                // Empty Slot
-                return `<div class="party-member"><div class="member-missing">(缺員)</div></div>`;
-            }
+            if (!slot.assigned) return `<div class="party-member"><div class="member-missing">(缺員)</div></div>`;
             
             const m = slot.assigned;
-            const iconRole = m.isFlex ? 'flex' : slot.role; // Use assigned slot role or flex
-            // Mapping role char to icon key
+            const iconRole = m.isFlex ? 'flex' : slot.role;
             const iconKey = m.isFlex ? 'flex' : (slot.role === 'T' ? 'tank' : slot.role === 'H' ? 'healer' : 'dps');
             
             let nameDisplay = m.name;
             if (m.isLeader) nameDisplay += ' <span title="隊長">👑</span>';
 
-            // SVG Injection
-            const iconSvg = CONFIG.ICONS[iconKey];
-
             return `
             <div class="party-member">
-                <div class="job-icon ${iconRole}" style="color:var(--${iconKey}-solid)">${iconSvg}</div>
+                <div class="job-icon ${iconRole}" style="color:var(--${iconKey}-solid)">${IconAssets.get(iconKey)}</div>
                 <div class="member-name">${nameDisplay}</div>
             </div>`;
         }
@@ -675,7 +666,6 @@
             toast.className = `toast ${type}`;
             toast.innerText = (type === 'error' ? '⚠️ ' : '✅ ') + msg;
             container.appendChild(toast);
-            
             requestAnimationFrame(() => toast.classList.add('show'));
             setTimeout(() => {
                 toast.classList.remove('show');
@@ -686,7 +676,6 @@
 
     /**
      * App Controller
-     * 職責：初始化、依賴注入、膠水程式碼 (Glue Code)
      */
     class App {
         constructor() {
@@ -697,21 +686,16 @@
         }
 
         initEventListeners() {
-            // Global Click Delegation for Dynamic Elements
             document.body.addEventListener('click', (e) => {
                 const target = e.target.closest('[data-action]');
                 if (!target) return;
-                
                 const action = target.dataset.action;
                 const idx = parseInt(target.dataset.idx);
                 const type = target.dataset.type;
 
-                if (action === 'setRole') {
-                    this.setRole(type, idx, target.dataset.role);
-                }
+                if (action === 'setRole') this.setRole(type, idx, target.dataset.role);
             });
 
-            // Specific Elements
             document.getElementById('btn-add-member').onclick = () => this.addNewMember();
             document.getElementById('input-new-member').onkeypress = (e) => { if(e.key === 'Enter') this.addNewMember(); };
             
@@ -731,7 +715,6 @@
                 if(confirm('確定要重置所有名單狀態嗎？自訂成員將會消失。')) this.store.reset();
             };
 
-            // Manual Input Binding (Debounced slightly or onInput)
             document.getElementById('manual-grid').addEventListener('input', (e) => {
                 if (e.target.classList.contains('manual-input')) {
                     const idx = e.target.dataset.idx;
@@ -739,22 +722,10 @@
                     this.store.manual[idx].name = val;
                     this.store.manual[idx].selected = !!val.trim();
                     this.store.save();
-                    this.ui.updateDashboard(); // Don't full render to lose focus
-                    
-                    // Toggle Clear Btn visibility locally
-                    const wrapper = e.target.parentElement;
-                    let clearBtn = wrapper.querySelector('.clear-btn-icon');
-                    if (val && !clearBtn) {
-                        // Re-render manually or simpler: just trigger re-render if needed, 
-                        // but to keep focus, we usually rely on updateDashboard only.
-                        // For strict refactor, let's keep it simple: lose focus is acceptable or fix focus.
-                        // Better: just render Manual section again? No, focus loss.
-                        // Let's just save. The UI update for clear btn will happen on next render.
-                    }
+                    this.ui.updateDashboard();
                 }
             });
             
-            // Delete Handlers
             document.getElementById('roster-grid').addEventListener('click', (e) => {
                 if(e.target.classList.contains('delete-btn')) {
                     this.store.removeMember(e.target.dataset.idx);
@@ -763,10 +734,8 @@
                 }
             });
             
-            // Generate
             document.getElementById('btn-generate').onclick = () => this.handleGenerate();
             
-            // Team Count
             document.getElementById('team-count-group').onclick = (e) => {
                 if(e.target.classList.contains('team-btn')) {
                     document.querySelectorAll('.team-btn').forEach(b => b.classList.remove('active'));
@@ -776,10 +745,8 @@
                 }
             };
 
-            // Copy
             document.getElementById('btn-copy').onclick = () => this.handleCopy();
             
-            // Toggle Manual Section
             document.getElementById('manual-toggle').onclick = function() {
                 this.classList.toggle('collapsed');
                 document.getElementById('manual-content').classList.toggle('collapsed');
@@ -796,7 +763,6 @@
                 this.ui.updateDashboard();
                 this.ui.showToast(`已加入: ${name}`);
                 input.value = '';
-                // Auto scroll
                 const grid = document.getElementById('roster-grid');
                 setTimeout(() => grid.scrollTop = grid.scrollHeight, 50);
             } else {
@@ -807,7 +773,6 @@
         setRole(type, index, role) {
             const target = type === 'roster' ? this.store.roster : this.store.manual;
             target[index].role = role;
-            // Auto select when role changes
             if (type === 'roster' || (type === 'manual' && target[index].name)) {
                 target[index].selected = true;
             }
@@ -837,7 +802,6 @@
             btn.classList.add('loading');
             btn.innerText = "運算分配中...";
 
-            // Simulate Async for UX
             setTimeout(() => {
                 const result = TeamBalancer.generate(active, this.store.teamCount);
                 this.ui.renderResults(result);
@@ -849,7 +813,6 @@
 
         handleCopy() {
             if (!this.ui.lastResult) return;
-            
             const results = this.ui.lastResult;
             let text = "";
 
@@ -876,6 +839,23 @@
             navigator.clipboard.writeText(text)
                 .then(() => this.ui.showToast('已複製到剪貼簿'))
                 .catch(() => this.ui.showToast('複製失敗', 'error'));
+        }
+    }
+
+    /**
+     * Assets: Icons
+     * Moved to the bottom to keep the main logic and config clean.
+     */
+    class IconAssets {
+        static get(name) {
+            const icons = {
+                tank: '<svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>',
+                healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
+                dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>',
+                flex: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7.5 18c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
+                clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
+            };
+            return icons[name] || '';
         }
     }
 
