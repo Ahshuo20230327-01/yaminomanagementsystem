@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器 (TW Localized)</title>
+    <title>FF14 百萬工會懶人組隊分組器 (Final Renamed)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <!-- 
@@ -238,8 +238,8 @@
         .warning-icon:hover .warning-tooltip { opacity: 1; }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 
-        /* 自動儲存開關 */
-        .switch-container { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-dim); }
+        /* 開關樣式 (Toggle Switch) */
+        .switch-container { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-dim); margin-top:2px; }
         .switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 20px; border: 1px solid #555; }
@@ -408,13 +408,25 @@
                     </div>
                 </div>
                 
-                <!-- 自動儲存開關 -->
-                <div class="switch-container">
-                    <label class="switch">
-                        <input type="checkbox" id="storageToggle" onchange="app.toggleStorage(this.checked)">
-                        <span class="slider"></span>
-                    </label>
-                    <span style="font-size:0.85rem; color:var(--text-dim);">自動儲存設定</span>
+                <!-- 開關區塊 -->
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- 自動儲存開關 -->
+                    <div class="switch-container">
+                        <label class="switch">
+                            <input type="checkbox" id="storageToggle" onchange="app.toggleStorage(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-size:0.85rem; color:var(--text-dim);">自動儲存設定</span>
+                    </div>
+                    
+                    <!-- 隨機分配職能開關 (改名後) -->
+                    <div class="switch-container">
+                        <label class="switch">
+                            <input type="checkbox" id="revealToggle" onchange="app.toggleReveal(this.checked)">
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-size:0.85rem; color:var(--text-dim);">隨機分配職能</span>
+                    </div>
                 </div>
             </div>
             
@@ -476,13 +488,15 @@
             this.KEYS = {
                 ROSTER: 'ff14_roster_data_v1',
                 MANUAL: 'ff14_manual_data_v1',
-                PREF: 'ff14_storage_enabled'
+                PREF: 'ff14_storage_enabled',
+                REVEAL_PREF: 'ff14_reveal_enabled' // 新增：顯示補位職能偏好
             };
             this.state = {
                 roster: [],
                 manual: [],
                 teamCount: 2,
                 isStorageEnabled: true,
+                isRevealMode: false, // 預設關閉顯示補位職能
                 lastResults: null
             };
         }
@@ -490,6 +504,10 @@
         load() {
             const pref = localStorage.getItem(this.KEYS.PREF);
             this.state.isStorageEnabled = pref === null ? true : (pref === 'true');
+            
+            // 載入顯示偏好
+            const revealPref = localStorage.getItem(this.KEYS.REVEAL_PREF);
+            this.state.isRevealMode = revealPref === 'true'; // 預設為 false
 
             // 如果不儲存，則直接載入預設值
             if (!this.state.isStorageEnabled) {
@@ -505,6 +523,9 @@
         }
 
         save() {
+            // 偏好設定總是儲存 (UX考量)
+            localStorage.setItem(this.KEYS.REVEAL_PREF, this.state.isRevealMode);
+            
             if (!this.state.isStorageEnabled) return;
             localStorage.setItem(this.KEYS.ROSTER, JSON.stringify(this.state.roster));
             localStorage.setItem(this.KEYS.MANUAL, JSON.stringify(this.state.manual));
@@ -533,7 +554,7 @@
     /**
      * ========================================
      * CLASS: LogicEngine
-     * 核心演算法：洗牌、填坑、人數過多處理、隊長指派
+     * 核心演算法：洗牌、填坑、溢出處理、隊長指派
      * ========================================
      */
     class LogicEngine {
@@ -723,8 +744,11 @@
                 if (e.key === 'Enter') this.addNewMember();
             });
             // 綁定切換開關 (Toggle)
-            const toggle = document.getElementById('storageToggle');
-            if(toggle) toggle.checked = this.sm.state.isStorageEnabled;
+            const storageToggle = document.getElementById('storageToggle');
+            if(storageToggle) storageToggle.checked = this.sm.state.isStorageEnabled;
+            
+            const revealToggle = document.getElementById('revealToggle');
+            if(revealToggle) revealToggle.checked = this.sm.state.isRevealMode;
         }
 
         renderAll() {
@@ -992,6 +1016,15 @@
             }
         }
 
+        toggleReveal(checked) {
+            this.sm.state.isRevealMode = checked;
+            this.sm.save(); // 儲存偏好
+            // 如果已有結果，直接重新渲染結果區
+            if (this.sm.state.lastResults) {
+                this.renderResults();
+            }
+        }
+
         resetData() {
             this.sm.resetToDefaults();
             this.sm.clearStorage();
@@ -1086,7 +1119,8 @@
             }
 
             if (member.isFlex) {
-                leftIconRole = 'flex'; // 補位顯示骰子
+                // [Reveal Option] 根據開關決定顯示骰子還是真實職能
+                leftIconRole = this.sm.state.isRevealMode ? slotRole : 'flex';
                 nameDisplay = member.name;
             } else {
                 nameDisplay = member.name;
