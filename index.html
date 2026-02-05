@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器 (Final Complete)</title>
+    <title>FF14 百萬工會懶人組隊分組器 (TW Localized)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <!-- 
       ========================================
       CSS 樣式區塊
-      定義了整體的黑金配色風格、RWD 響應式佈局以及動畫效果
+      定義了整體的黑金配色風格、RWD 響應式版面配置以及動畫效果
       ========================================
     -->
     <style>
@@ -116,7 +116,7 @@
         }
         .add-btn:hover { background: var(--text-gold); color: #000; border-color: var(--text-gold); }
 
-        /* --- 批量操作按鈕 --- */
+        /* --- 批次操作按鈕 --- */
         .bulk-actions { display: flex; gap: 10px; align-items: center; }
         .text-btn {
             background: none; border: none; color: var(--text-dim); font-size: 0.85rem; cursor: pointer; padding: 0;
@@ -161,7 +161,7 @@
         .role-icon:hover { transform: scale(1.1); }
         .role-icon:active { transform: scale(0.95); }
         
-        /* 職能激活狀態樣式 */
+        /* 職能啟用狀態樣式 */
         .role-icon.t-active { background: rgba(74, 144, 226, 0.2); border-color: var(--tank-solid); color: var(--tank-solid); box-shadow: 0 0 8px var(--tank-solid); }
         .role-icon.h-active { background: rgba(126, 211, 33, 0.2); border-color: var(--healer-solid); color: var(--healer-solid); box-shadow: 0 0 8px var(--healer-solid); }
         .role-icon.d-active { background: rgba(208, 2, 27, 0.2); border-color: var(--dps-solid); color: var(--dps-solid); box-shadow: 0 0 8px var(--dps-solid); }
@@ -293,6 +293,8 @@
         .job-icon.healer svg { fill: var(--healer-solid); filter: drop-shadow(0 0 5px rgba(126, 211, 33, 0.4)); }
         .job-icon.dps svg { fill: var(--dps-solid); filter: drop-shadow(0 0 5px rgba(208, 2, 27, 0.4)); }
         .job-icon.flex svg { fill: var(--flex-solid); filter: drop-shadow(0 0 5px rgba(156, 39, 176, 0.4)); }
+        /* 缺員圖示樣式 (淺灰) */
+        .job-icon.missing { color: #555; font-size: 18px; display: flex; justify-content: center; align-items: center; }
 
         /* 文字樣式修正 (防止過長破版) */
         .member-name { 
@@ -445,7 +447,7 @@
     /**
      * ========================================
      * CLASS: IconAssets
-     * 管理所有 SVG 圖示字串
+     * 管理所有 SVG 圖示字串 (圖示資源管理)
      * ========================================
      */
     class IconAssets {
@@ -455,7 +457,8 @@
                 healer: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>',
                 dps: '<svg viewBox="0 0 24 24"><path d="M14.5 17.5L3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2"/></svg>',
                 flex: '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM7.5 18c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm9 8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-8.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
-                clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>'
+                clear: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+                missing: '🚫' // 缺員圖示 (Emoji)
             };
             return icons[name] || '';
         }
@@ -464,7 +467,7 @@
     /**
      * ========================================
      * CLASS: StateManager
-     * 負責資料的 CRUD 與 LocalStorage 持久化
+     * 負責資料存取與瀏覽器本地儲存 (LocalStorage) 持久化
      * ========================================
      */
     class StateManager {
@@ -530,7 +533,7 @@
     /**
      * ========================================
      * CLASS: LogicEngine
-     * 核心演算法：洗牌、填坑、溢出處理、隊長指派
+     * 核心演算法：洗牌、填坑、人數過多處理、隊長指派
      * ========================================
      */
     class LogicEngine {
@@ -538,7 +541,7 @@
             this.state = state;
         }
 
-        // Fisher-Yates 洗牌算法
+        // Fisher-Yates 洗牌演算法
         shuffle(array) {
             let currentIndex = array.length, randomIndex;
             while (currentIndex != 0) {
@@ -554,6 +557,7 @@
             let teamCount = this.state.teamCount;
             
             // 1. 收集名單分類 (Buckets)
+            // 將使用者選取的名單依照職能分類
             let lockedTanks = [], lockedHealers = [], lockedDPS = [], flexPool = [];
 
             const collect = (list, isManual) => {
@@ -573,37 +577,45 @@
             collect(this.state.roster, false);
             collect(this.state.manual, true);
 
-            // [Smart 4-Man] 如果總人數剛好 4 人，強制設為 1 隊 (忽略原本的 2 隊設定)
+            // [智慧 4 人成團] 如果總人數剛好 4 人，強制設為 1 隊 (忽略原本的 2 隊設定)
             const totalSelected = lockedTanks.length + lockedHealers.length + lockedDPS.length + flexPool.length;
             if (totalSelected === 4) {
                 teamCount = 1; 
             }
 
-            // 洗牌各個池子
+            // 先對人員池進行洗牌，確保同一職能內的隨機性
             this.shuffle(lockedTanks); this.shuffle(lockedHealers); this.shuffle(lockedDPS); this.shuffle(flexPool);
 
-            // 2. 建立坑位 (Slots)
-            // 這裡使用了 "Shuffled Slot Order" 機制，確保每一輪的填入順序都是隨機的
-            // 解決了「第 1 隊永遠優先拿到稀缺職能」的問題
+            // 2. 建立職能空缺 (Slots)
+            // [修正隨機性 Bug] 關鍵修正：
+            // 我們不能使用固定的 1->2->3 順序來建立職能空缺，否則稀缺職能(如1個坦)永遠會去第1隊。
+            // 解決方案：每一種職能(T/H/D)的分配順序，都要「重新洗牌」。
+            
             let slots = [];
+            
+            // 輔助函式：產生隨機的隊伍順序陣列 (例如 [2, 1] 或 [1, 2])
             const getShuffledTeamIds = () => {
                 let ids = [];
                 for(let i=1; i<=teamCount; i++) ids.push(i);
                 return this.shuffle(ids);
             };
 
+            // 建立坦克空缺 (順序隨機)
             let tOrder = getShuffledTeamIds();
             tOrder.forEach(tid => slots.push({ teamId: tid, role: 'tank', type: 'T', assigned: null }));
             
+            // 建立補師空缺 (順序隨機)
             let hOrder = getShuffledTeamIds();
             hOrder.forEach(tid => slots.push({ teamId: tid, role: 'healer', type: 'H', assigned: null }));
             
+            // 建立 DPS 空缺 (順序隨機)
             let d1Order = getShuffledTeamIds();
             d1Order.forEach(tid => slots.push({ teamId: tid, role: 'dps', type: 'D', assigned: null }));
             let d2Order = getShuffledTeamIds();
             d2Order.forEach(tid => slots.push({ teamId: tid, role: 'dps', type: 'D', assigned: null }));
 
             // 3. 第一階段：填入鎖定職能 (Fill Locked Roles)
+            // 系統會依照上面隨機產生的空缺順序，嘗試將鎖定職能的人填入
             slots.forEach(slot => {
                 if(slot.assigned) return;
                 if(slot.type === 'T' && lockedTanks.length > 0) slot.assigned = lockedTanks.shift();
@@ -611,8 +623,9 @@
                 else if(slot.type === 'D' && lockedDPS.length > 0) slot.assigned = lockedDPS.shift();
             });
 
-            // 4. 第二階段：[Total Overflow] 溢出轉 Flex
-            // 所有沒填進去的鎖定職能者，全部降級為 Flex (isFlex = true)，並合併到 flexPool
+            // 4. 第二階段：[人數過多 (Overflow) 轉為候補/補位]
+            // 如果某職能滿了，剩下的人會被標記為 "isFlex: true" (視覺上變骰子)，
+            // 並加入到 Flex 池中，去填補剩下的任何空位。
             const convertToFlexStyle = (list) => list.map(m => ({ ...m, isFlex: true })); 
             
             let overflowPool = [];
@@ -620,14 +633,15 @@
             overflowPool = overflowPool.concat(convertToFlexStyle(lockedHealers)); // 溢出的 H
             overflowPool = overflowPool.concat(convertToFlexStyle(lockedDPS)); // 溢出的 D
             
-            // 清空鎖定池
+            // 清空鎖定池 (因為都搬去 overflow 了)
             lockedTanks = []; lockedHealers = []; lockedDPS = [];
             
-            // 合併並再次洗牌
+            // 合併原始 Flex 池與溢出池，並再次洗牌
             let totalFlexPool = [...flexPool, ...overflowPool];
             this.shuffle(totalFlexPool);
 
             // 5. 第三階段：用 Flex 池填滿剩下所有空位
+            // 此時不分職能，有洞就填
             slots.forEach(slot => {
                 if(!slot.assigned && totalFlexPool.length > 0) {
                     slot.assigned = totalFlexPool.shift(); 
@@ -638,6 +652,7 @@
             let leftD = totalFlexPool; 
 
             // 6. 整理結果並指派隊長 (Result Mapping & Leader Assignment)
+            // 將扁平的 slots 轉回依照隊伍 ID 的結構
             let teamsMap = {};
             for(let i=1; i<=teamCount; i++) {
                 teamsMap[i] = { t: [], h: [], d: [], members: [] }; 
@@ -652,8 +667,8 @@
                 }
             });
 
-            // [Random Leader Logic]
-            // 只有當隊伍數 >= 2 時才指派隊長 (單人團通常不需要)
+            // [隨機隊長邏輯]
+            // 只有當隊伍數 >= 2 時才指派隊長 (單人團通常預設自己是隊長)
             if (teamCount >= 2) {
                 for(let i=1; i<=teamCount; i++) {
                     const teamMembers = teamsMap[i].members;
@@ -664,10 +679,10 @@
                 }
             }
 
-            // 封裝結果供 UI 使用
+            // 封裝結果供使用者介面使用
             this.state.lastResults = { 
                 teams: [], 
-                left: {t: [], h: [], d: leftD} 
+                left: {t: [], h: [], d: leftD} // 候補區統一放在 d (顯示為 Flex/DPS)
             };
 
             for(let i=1; i<=teamCount; i++) {
@@ -707,7 +722,7 @@
             document.getElementById('newMemberInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') this.addNewMember();
             });
-            // 綁定開關
+            // 綁定切換開關 (Toggle)
             const toggle = document.getElementById('storageToggle');
             if(toggle) toggle.checked = this.sm.state.isStorageEnabled;
         }
@@ -737,12 +752,13 @@
             });
         }
 
-        // 注入 SVG 圖示
+        // 注入 SVG 圖示 (取代 Class 中的 HTML 字串)
         injectIcons() {
             document.querySelectorAll('.job-icon.tank').forEach(el => el.innerHTML = IconAssets.get('tank'));
             document.querySelectorAll('.job-icon.healer').forEach(el => el.innerHTML = IconAssets.get('healer'));
             document.querySelectorAll('.job-icon.dps').forEach(el => el.innerHTML = IconAssets.get('dps'));
             document.querySelectorAll('.job-icon.flex').forEach(el => el.innerHTML = IconAssets.get('flex'));
+            // Missing icon is text/emoji, handled in CSS/HTML
         }
 
         // 建立成員卡片 DOM
@@ -789,7 +805,7 @@
         createRoleBtn(index, type, roleType, currentRole) {
             const activeClass = (currentRole === roleType) ? `${roleType.toLowerCase()}-active` : '';
             const fn = type === 'preset' ? `app.setRole(${index}, '${roleType}')` : `app.setManualRole(${index}, '${roleType}')`;
-            // Mapping role type to icon key
+            // 對應職能類型的圖示 key
             let iconKey = 'dps';
             if(roleType === 'T') iconKey = 'tank';
             else if(roleType === 'H') iconKey = 'healer';
@@ -821,7 +837,6 @@
             const shouldSelect = !!val.trim();
             this.sm.state.manual[index].selected = shouldSelect;
             this.sm.save();
-            // 不重繪整個 grid 以保持 focus，只更新 active class
             const card = document.getElementById(`manual-card-${index}`);
             if(card) {
                 if(shouldSelect) card.classList.add('active');
@@ -906,7 +921,7 @@
             this._updateStat('d', d, needD);
             document.getElementById('count-f').innerText = f;
 
-            // [Capacity Alert] 人數防呆警示
+            // [人數防呆警示]
             // 如果選取人數 > (目前隊伍數 * 4) (每個 Light Party 4人)
             const warningEl = document.getElementById('overflow-warning');
             if (totalSelected > (this.sm.state.teamCount * 4)) { 
@@ -979,7 +994,7 @@
 
         resetData() {
             this.sm.resetToDefaults();
-            this.sm.clearStorage(); // 重置時也清除快取
+            this.sm.clearStorage();
             location.reload();
         }
 
@@ -1015,7 +1030,7 @@
             btn.innerText = "運算分配中...";
             copyBtn.style.display = 'none';
 
-            // 模擬運算延遲
+            // 模擬運算延遲效果
             setTimeout(() => {
                 this.logic.generateTeams();
                 this.renderResults();
@@ -1032,7 +1047,6 @@
             let htmlOutput = "";
 
             results.teams.forEach((t, i) => {
-                // 為了動畫延遲效果
                 htmlOutput += `
                 <div class="party-list" style="animation-delay: ${i*0.1}s">
                     <div class="party-header">
@@ -1066,26 +1080,28 @@
             let leftIconRole = slotRole;
             let badge = '';
 
-            if (!isMissing) {
-                if (member.isFlex) {
-                    leftIconRole = 'flex'; // 補位顯示骰子
-                    nameDisplay = member.name;
-                } else {
-                    nameDisplay = member.name;
-                }
-                
-                // 隊長標記 (皇冠)
-                if (member.isLeader) {
-                    nameDisplay += ' <span style="margin-left:4px; font-size:1.1em;" title="隊長">👑</span>';
-                }
+            if (isMissing) {
+                // [Missing Icon Fix] 缺員時顯示 🚫
+                return `<div class="party-member"><div class="job-icon missing">${IconAssets.get('missing')}</div><div class="member-missing">${nameDisplay}</div></div>`;
+            }
+
+            if (member.isFlex) {
+                leftIconRole = 'flex'; // 補位顯示骰子
+                nameDisplay = member.name;
+            } else {
+                nameDisplay = member.name;
             }
             
-            const cls = isMissing ? 'member-missing' : 'member-name';
+            // 隊長標記 (皇冠)
+            if (member.isLeader) {
+                nameDisplay += ' <span style="margin-left:4px; font-size:1.1em;" title="隊長">👑</span>';
+            }
+            
             const iconSvg = IconAssets.get(leftIconRole);
-            return `<div class="party-member"><div class="job-icon ${leftIconRole}" style="width:20px;height:20px;display:flex;">${iconSvg}</div><div class="${cls}">${nameDisplay}</div>${badge}</div>`;
+            return `<div class="party-member"><div class="job-icon ${leftIconRole}" style="width:20px;height:20px;display:flex;">${iconSvg}</div><div class="member-name">${nameDisplay}</div>${badge}</div>`;
         }
 
-        // --- 複製功能 (Smart Copy) ---
+        // --- 複製功能 (智慧複製) ---
         copyResults() {
             const results = this.sm.state.lastResults;
             if (!results) return;
