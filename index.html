@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FF14 百萬工會懶人組隊分組器 (Final Renamed)</title>
+    <title>FF14 百萬工會懶人組隊分組器 (Reveal Copy)</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <!-- 
@@ -489,14 +489,14 @@
                 ROSTER: 'ff14_roster_data_v1',
                 MANUAL: 'ff14_manual_data_v1',
                 PREF: 'ff14_storage_enabled',
-                REVEAL_PREF: 'ff14_reveal_enabled' // 新增：顯示補位職能偏好
+                REVEAL_PREF: 'ff14_reveal_enabled' // 新增：隨機分配職能偏好
             };
             this.state = {
                 roster: [],
                 manual: [],
                 teamCount: 2,
                 isStorageEnabled: true,
-                isRevealMode: false, // 預設關閉顯示補位職能
+                isRevealMode: false, // 預設關閉隨機分配職能
                 lastResults: null
             };
         }
@@ -1142,6 +1142,10 @@
 
             let text = "";
             
+            // 檢查是否開啟「隨機分配職能」(Reveal Mode)
+            // 如果開啟，isFlex 成員也會被視為鎖定職能來處理
+            const isRevealMode = this.sm.state.isRevealMode;
+
             results.teams.forEach(team => {
                 text += `【第 ${team.id} 小隊】 (LIGHT PARTY)\n`;
                 
@@ -1160,7 +1164,11 @@
                         let displayName = slot.data.name;
                         if(slot.data.isLeader) displayName += " (隊長)";
 
-                        if (slot.data.isFlex) {
+                        // 判斷邏輯：
+                        // 如果是 Flex 且「未開啟」隨機顯示 -> 進入 (未定) 清單
+                        // 如果是 Flex 且「已開啟」隨機顯示 -> 進入正常職能清單 (顯示 Icon)
+                        // 如果不是 Flex -> 進入正常職能清單
+                        if (slot.data.isFlex && !isRevealMode) {
                             flexMembers.push(displayName);
                         } else {
                             lockedMembers.push(`${slot.icon} ${displayName}`);
@@ -1176,9 +1184,13 @@
             const hasBench = results.left.d.length > 0;
             if (hasBench) {
                 text += `【候補名單】\n`;
-                // 區分鎖定與未定
-                const lockedDPS = results.left.d.filter(m => !m.isFlex);
-                const flexLeftovers = results.left.d.filter(m => m.isFlex);
+                
+                // 候補邏輯：
+                // 如果開啟 Reveal Mode，候補的 Flex 也會被視為 DPS (或原職能)，但目前邏輯是候補統一為 DPS
+                // 所以這裡我們可以維持原樣，或者也讓候補顯示 DPS Icon
+                // 為了簡單起見，候補通常就是候補，維持原樣較好分辨
+                const lockedDPS = results.left.d.filter(m => !m.isFlex || isRevealMode);
+                const flexLeftovers = results.left.d.filter(m => m.isFlex && !isRevealMode);
 
                 if (lockedDPS.length > 0) text += lockedDPS.map(m => `⚔️ ${m.name}`).join(", ") + "\n";
                 if (flexLeftovers.length > 0) text += `(未定) ${flexLeftovers.map(m => m.name).join("、")}\n`;
